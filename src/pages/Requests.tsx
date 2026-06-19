@@ -190,7 +190,7 @@ export default function Requests() {
         {doors.map((d) => (
           <button
             key={d.id}
-            onClick={() => (d.id === 'book' ? nav('/calendar') : setParams({ door: d.id }))}
+            onClick={() => (d.id === 'book' ? nav('/book') : setParams({ door: d.id }))}
             style={{
               display: 'flex',
               alignItems: 'center',

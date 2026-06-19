@@ -1,9 +1,4 @@
-import rawEvents from '../data/events.json';
-import rawPeople from '../data/people.json';
-import type { WcsEvent, Person } from './types';
-
-export const events: WcsEvent[] = (rawEvents as WcsEvent[]).filter((e) => !!e.starts_at);
-export const people: Person[] = rawPeople as Person[];
+import type { WcsEvent, EventRec } from './types';
 
 const TZ = 'America/New_York';
 
@@ -13,47 +8,30 @@ export function parse(d: string | null): Date | null {
 
 // YYYY-MM-DD key in school timezone, so day grouping is stable.
 export function dayKey(d: Date): string {
-  const p = new Intl.DateTimeFormat('en-CA', {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(d);
-  return p;
 }
 
 export function fmtTime(d: string | null): string {
   if (!d) return '';
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: TZ,
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(d));
+  return new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(new Date(d));
 }
 
 export function fmtDateLong(d: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: TZ,
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(d);
+  return new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'long', month: 'long', day: 'numeric' }).format(d);
 }
 
 export function fmtDateShort(d: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: TZ,
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(d);
+  return new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric' }).format(d);
 }
 
 export function startOfWeek(d: Date): Date {
-  const key = dayKey(d);
-  const local = new Date(key + 'T12:00:00');
-  const dow = local.getDay();
-  local.setDate(local.getDate() - dow);
+  const local = new Date(dayKey(d) + 'T12:00:00');
+  local.setDate(local.getDate() - local.getDay());
   return local;
 }
 
@@ -63,9 +41,9 @@ export function addDays(d: Date, n: number): Date {
   return r;
 }
 
-export function eventsOnDay(d: Date): WcsEvent[] {
+export function eventsOnDay<T extends WcsEvent>(list: T[], d: Date): T[] {
   const key = dayKey(d);
-  return events
+  return list
     .filter((e) => e.starts_at && dayKey(new Date(e.starts_at)) === key)
     .sort((a, b) => (a.all_day === b.all_day ? 0 : a.all_day ? -1 : 1) || (a.starts_at! < b.starts_at! ? -1 : 1));
 }
@@ -83,14 +61,14 @@ export function statusColor(status: string): string {
 
 export interface Conflict {
   room: string;
-  a: WcsEvent;
-  b: WcsEvent;
+  a: EventRec;
+  b: EventRec;
 }
 
 // Two events conflict if they share a room and their time ranges overlap.
-export function findConflicts(list: WcsEvent[]): Conflict[] {
+export function findConflicts(list: EventRec[]): Conflict[] {
   const out: Conflict[] = [];
-  const byRoom = new Map<string, WcsEvent[]>();
+  const byRoom = new Map<string, EventRec[]>();
   for (const e of list) {
     if (e.all_day || e.status === 'Declined') continue;
     for (const r of e.rooms) {
@@ -111,6 +89,3 @@ export function findConflicts(list: WcsEvent[]): Conflict[] {
   }
   return out;
 }
-
-export const pendingCount = events.filter((e) => e.status === 'Pending').length;
-export const approvedCount = events.filter((e) => e.status === 'Approved').length;

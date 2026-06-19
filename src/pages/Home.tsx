@@ -1,20 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  DEMO_TODAY,
-  eventsOnDay,
-  findConflicts,
-  fmtTime,
-  fmtDateLong,
-  statusColor,
-  pendingCount,
-  events,
-} from '../lib/data';
-import { allRooms, allResources } from '../data/inventory';
+import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusColor } from '../lib/data';
+import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { people } from '../lib/data';
 
 const tiles = [
-  { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/calendar' },
+  { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
   { cls: 't-maint', icon: 'ti-tool', label: 'Maintenance', to: '/requests?door=maintenance' },
   { cls: 't-it', icon: 'ti-device-laptop', label: 'IT', to: '/requests?door=it' },
   { cls: 't-visit', icon: 'ti-id', label: 'Visitor', to: '/requests?door=visitor' },
@@ -30,8 +20,10 @@ function greet(): string {
 export default function Home() {
   const nav = useNavigate();
   const { user } = useSession();
-  const today = eventsOnDay(DEMO_TODAY);
+  const { db } = useStore();
+  const today = eventsOnDay(db.events, DEMO_TODAY);
   const conflicts = findConflicts(today);
+  const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
   const firstName = user.name.split(' ')[0];
   const needs = pendingCount + conflicts.length;
 
@@ -70,9 +62,9 @@ export default function Home() {
         {today.slice(0, 6).map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
           return (
-            <div key={i}>
+            <div key={e.id}>
               {i > 0 && <div className="divider" />}
-              <button className="row" onClick={() => nav('/calendar')}>
+              <button className="row" onClick={() => nav('/event/' + e.id)}>
                 <span className="time tnum">{e.all_day ? 'All day' : fmtTime(e.starts_at)}</span>
                 <span className="dot" style={{ background: conflicted ? 'var(--bad)' : statusColor(e.status) }} />
                 <span className="body">
@@ -91,7 +83,7 @@ export default function Home() {
       </div>
 
       <div className="widgets" style={{ marginBottom: 24 }}>
-        <button className="widget" onClick={() => nav('/requests')}>
+        <button className="widget" onClick={() => nav('/calendar')}>
           <div className="widget-top">
             <span>Needs you</span>
             <i className="ti ti-flag-3" style={{ color: 'var(--warn)', fontSize: 16 }} />
@@ -115,16 +107,16 @@ export default function Home() {
 
       <div className="statstrip">
         <span>
-          <b>{allRooms.length}</b> rooms
+          <b>{db.rooms.length}</b> rooms
         </span>
         <span>
-          <b>{allResources.length}</b> resources
+          <b>{db.resources.length}</b> resources
         </span>
         <span>
-          <b>{people.length}</b> staff
+          <b>{db.people.length}</b> staff
         </span>
         <span>
-          <b>{events.length}</b> events
+          <b>{db.events.length}</b> events
         </span>
       </div>
     </>

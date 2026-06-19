@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DEMO_TODAY,
   eventsOnDay,
@@ -11,10 +12,13 @@ import {
   dayKey,
   statusColor,
 } from '../lib/data';
+import { useStore } from '../lib/store';
 
 export default function Calendar() {
+  const nav = useNavigate();
+  const { db } = useStore();
   const [day, setDay] = useState<Date>(DEMO_TODAY);
-  const list = eventsOnDay(day);
+  const list = eventsOnDay(db.events, day);
   const conflicts = findConflicts(list);
   const week = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(day), i));
 
@@ -30,10 +34,10 @@ export default function Calendar() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {week.map((d) => {
           const active = dayKey(d) === dayKey(day);
-          const has = eventsOnDay(d).length;
+          const has = eventsOnDay(db.events, d).length;
           return (
             <button
               key={dayKey(d)}
@@ -70,12 +74,20 @@ export default function Calendar() {
         })}
       </div>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <button className="fab" onClick={() => nav('/book?date=' + dayKey(day))}>
+          <i className="ti ti-plus" /> Book a space
+        </button>
+      </div>
+
       {conflicts.length > 0 && (
         <div className="banner">
           <i className="ti ti-alert-triangle" />
           <span>
-            <b>{conflicts.length} conflict{conflicts.length === 1 ? '' : 's'}</b> today — {conflicts[0].room} is
-            double-booked. Tap to resolve.
+            <b>
+              {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'}
+            </b>{' '}
+            today — {conflicts[0].room} is double-booked.
           </span>
         </div>
       )}
@@ -85,11 +97,13 @@ export default function Calendar() {
         {list.map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
           return (
-            <div key={i}>
+            <div key={e.id}>
               {i > 0 && <div className="divider" />}
-              <div className="row" style={{ cursor: 'default' }}>
+              <button className="row" onClick={() => nav('/event/' + e.id)}>
                 <span className="time tnum">
-                  {e.all_day ? 'All day' : (
+                  {e.all_day ? (
+                    'All day'
+                  ) : (
                     <>
                       {fmtTime(e.starts_at)}
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtTime(e.ends_at)}</div>
@@ -119,7 +133,7 @@ export default function Calendar() {
                 >
                   {conflicted ? 'Conflict' : e.status}
                 </span>
-              </div>
+              </button>
             </div>
           );
         })}

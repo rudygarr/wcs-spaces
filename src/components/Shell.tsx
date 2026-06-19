@@ -1,13 +1,59 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { people } from '../lib/data';
+import { useStore } from '../lib/store';
 import { useSession, initials, roleLabel } from '../lib/session';
+import Modal, { field, primaryBtn } from './Modal';
 import type { ReactNode } from 'react';
+
+function AddStaff({ onClose }: { onClose: () => void }) {
+  const { addPerson } = useStore();
+  const { setUser } = useSession();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [admin, setAdmin] = useState(false);
+  function submit() {
+    if (!name.trim()) return;
+    const p = addPerson({
+      name: name.trim(),
+      email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '.')}@demo.wcsmiami.org`,
+      event: admin ? 'Creator' : 'Viewer',
+      rooms: admin ? 'Editor' : 'Viewer',
+      resources: admin ? 'Editor' : 'Viewer',
+      people: admin ? 'Editor' : 'Viewer',
+      resolves_conflicts: admin,
+      site_admin: admin,
+    });
+    setUser(p);
+    onClose();
+  }
+  return (
+    <Modal title="Add staff member" onClose={onClose}>
+      <label className="flabel">Full name</label>
+      <input style={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" autoFocus />
+      <label className="flabel">Email</label>
+      <input
+        style={field}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="optional — auto-generated if blank"
+      />
+      <label className="flabel" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+        <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} />
+        Administrator (can approve & resolve conflicts)
+      </label>
+      <button style={{ ...primaryBtn, marginTop: 18 }} onClick={submit}>
+        Add staff member
+      </button>
+    </Modal>
+  );
+}
 
 function RoleSwitcher() {
   const { user, setUser } = useSession();
+  const { db, reset } = useStore();
   const [open, setOpen] = useState(false);
-  const sorted = [...people].sort((a, b) =>
+  const [adding, setAdding] = useState(false);
+  const sorted = [...db.people].sort((a, b) =>
     a.site_admin === b.site_admin ? a.name.localeCompare(b.name) : a.site_admin ? -1 : 1,
   );
   return (
@@ -20,10 +66,20 @@ function RoleSwitcher() {
         <div className="switch-backdrop" onClick={() => setOpen(false)}>
           <div className="switch-panel" onClick={(e) => e.stopPropagation()}>
             <div className="switch-head">View the app as any staff member — fakes sign-in for the demo.</div>
+            <button
+              className="add-row"
+              onClick={() => {
+                setOpen(false);
+                setAdding(true);
+              }}
+            >
+              <i className="ti ti-user-plus" /> Add staff member
+            </button>
+            <div className="divider" />
             {sorted.map((p) => (
               <button
-                key={p.email}
-                className={'switch-row' + (p.email === user.email ? ' active' : '')}
+                key={p.id}
+                className={'switch-row' + (p.id === user.id ? ' active' : '')}
                 onClick={() => {
                   setUser(p);
                   setOpen(false);
@@ -37,12 +93,26 @@ function RoleSwitcher() {
                     {p.resolves_conflicts ? ' · Conflict resolver' : ''}
                   </div>
                 </span>
-                {p.email === user.email && <i className="ti ti-check" style={{ color: 'var(--green)' }} />}
+                {p.id === user.id && <i className="ti ti-check" style={{ color: 'var(--green)' }} />}
               </button>
             ))}
+            <div className="divider" />
+            <button
+              className="add-row"
+              style={{ color: 'var(--text-3)' }}
+              onClick={() => {
+                if (confirm('Reset all demo data back to the original seed? Any rooms, staff, or bookings you added will be removed.')) {
+                  reset();
+                  setOpen(false);
+                }
+              }}
+            >
+              <i className="ti ti-refresh" /> Reset demo data
+            </button>
           </div>
         </div>
       )}
+      {adding && <AddStaff onClose={() => setAdding(false)} />}
     </>
   );
 }

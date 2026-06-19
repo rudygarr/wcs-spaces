@@ -27,3 +27,31 @@ export interface Person {
   resolves_conflicts: boolean;
   site_admin: boolean;
 }
+
+// ---- identified records used by the store ----
+export interface Room {
+  id: string;
+  name: string;
+  folder: string;
+}
+
+export interface Resource {
+  id: string;
+  name: string;
+  folder: string;
+}
+
+export interface PersonRec extends Person {
+  id: string;
+}
+
+export interface EventRec extends WcsEvent {
+  id: string;
+}
+
+export interface Database {
+  rooms: Room[];
+  resources: Resource[];
+  people: PersonRec[];
+  events: EventRec[];
+}
