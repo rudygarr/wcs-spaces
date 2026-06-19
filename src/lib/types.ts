@@ -15,6 +15,9 @@ export interface WcsEvent {
   details: string | null;
   rooms: string[];
   resources: string[];
+  // 'public' = pulled from the school's master calendar feed; 'internal' = booked in-app.
+  source?: 'public' | 'internal';
+  category?: string;
 }
 
 export interface Person {
