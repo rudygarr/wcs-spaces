@@ -1,0 +1,622 @@
+[
+  {
+    "name": "Sherry Medder",
+    "email": "sherry.medder@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": true,
+    "site_admin": true
+  },
+  {
+    "name": "Vicki Kaplan",
+    "email": "vicki.kaplan@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Ethel Ricardo",
+    "email": "ethel.ricardo@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Rudy Garrido",
+    "email": "rudy.garrido@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": false,
+    "site_admin": true
+  },
+  {
+    "name": "Lauren Hartman",
+    "email": "lauren.hartman@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Lorena Vicente",
+    "email": "lorena.vicente@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Suzanne Suris",
+    "email": "suzanne.suris@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Seth Carlson",
+    "email": "seth.carlson@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Nicole Perez",
+    "email": "nicole.perez@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Linda Walker",
+    "email": "linda.walker@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": false,
+    "site_admin": true
+  },
+  {
+    "name": "Kathy Ramirez",
+    "email": "kathy.ramirez@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Mirella Webster",
+    "email": "mirella.webster@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Mary Fernandez",
+    "email": "mary.fernandez@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Amy Williams",
+    "email": "amy.williams@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Angela Castano",
+    "email": "angela.castano@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Julian Rosas",
+    "email": "julian.rosas@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Omar Valerio",
+    "email": "omar.valerio@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": false,
+    "site_admin": true
+  },
+  {
+    "name": "Scarlett Saldana",
+    "email": "scarlett.saldana@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "PJ Brown",
+    "email": "pj.brown@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": true,
+    "site_admin": false
+  },
+  {
+    "name": "Ben Warren",
+    "email": "ben.warren@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Julie Doan",
+    "email": "julie.doan@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": true,
+    "site_admin": false
+  },
+  {
+    "name": "John Bishop",
+    "email": "john.bishop@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Lenny Castaneda",
+    "email": "lenny.castaneda@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Stephanie Bogie",
+    "email": "stephanie.bogie@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Monica Sanchez",
+    "email": "monica.sanchez@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Lori Sakkab",
+    "email": "lori.sakkab@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": true,
+    "site_admin": false
+  },
+  {
+    "name": "Angie Spivak-Lopez",
+    "email": "angie.spivak.lopez@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": true,
+    "site_admin": true
+  },
+  {
+    "name": "Evelyn Escobar",
+    "email": "evelyn.escobar@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Tony Rodriguez",
+    "email": "tony.rodriguez@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Kim Comber",
+    "email": "kim.comber@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Rob Lundgren",
+    "email": "rob.lundgren@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Lazaro (Laz) Ospina",
+    "email": "lazaro.laz.ospina@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Ursula Arner",
+    "email": "ursula.arner@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Jessica Carrasquillo",
+    "email": "jessica.carrasquillo@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Leonor Belaval",
+    "email": "leonor.belaval@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Olga Brown",
+    "email": "olga.brown@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Laura Plyler",
+    "email": "laura.plyler@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Ariel Triana",
+    "email": "ariel.triana@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Alyssa Fongon",
+    "email": "alyssa.fongon@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Jose Oviedo",
+    "email": "jose.oviedo@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Editor",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Courtney Wainwright",
+    "email": "courtney.wainwright@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Peter Bouwsma",
+    "email": "peter.bouwsma@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Taylor Infante",
+    "email": "taylor.infante@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Debbie Richardson",
+    "email": "debbie.richardson@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Eddy Pinero",
+    "email": "eddy.pinero@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Claudio Gamarra",
+    "email": "claudio.gamarra@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Louis Moll",
+    "email": "louis.moll@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Madeline Dirube",
+    "email": "madeline.dirube@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": true,
+    "site_admin": false
+  },
+  {
+    "name": "Jennifer Pino",
+    "email": "jennifer.pino@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Aileen Sanchez",
+    "email": "aileen.sanchez@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Mary Klevan",
+    "email": "mary.klevan@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Cesar Mejia",
+    "email": "cesar.mejia@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Editor",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Kurt Fedee",
+    "email": "kurt.fedee@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Joseph Carpenter",
+    "email": "joseph.carpenter@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Adriana Marrero",
+    "email": "adriana.marrero@demo.wcsmiami.org",
+    "event": "Event Administrator",
+    "rooms": "Editor",
+    "resources": "Editor",
+    "people": "Viewer",
+    "resolves_conflicts": true,
+    "site_admin": false
+  },
+  {
+    "name": "Jojo Borjas",
+    "email": "jojo.borjas@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Stefanie Harris",
+    "email": "stefanie.harris@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Kyra Milian",
+    "email": "kyra.milian@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Armando Alicandu",
+    "email": "armando.alicandu@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Gabriela Valdespino",
+    "email": "gabriela.valdespino@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Gustavo Pacheco",
+    "email": "gustavo.pacheco@demo.wcsmiami.org",
+    "event": "Event Viewer",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  },
+  {
+    "name": "Emily Ramos",
+    "email": "emily.ramos@demo.wcsmiami.org",
+    "event": "Event Creator",
+    "rooms": "Viewer",
+    "resources": "Viewer",
+    "people": "Viewer",
+    "resolves_conflicts": false,
+    "site_admin": false
+  }
+]
