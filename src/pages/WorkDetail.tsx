@@ -127,6 +127,8 @@ export default function WorkDetail() {
   const team = deptTeam(db.people, w.department);
   const drivers = db.drivers.filter((d) => d.active !== false);
   const buses = db.resources.filter((r) => r.folder === 'Transportation').map((r) => r.name);
+  // Equipment this department can hand to a job (IT devices, maintenance gear).
+  const deptResources = db.resources.filter((r) => r.folder === w.department).map((r) => r.name);
 
   // A bus is "in use" if another trip on the same day already has it on a leg.
   const busInUse = (bus: string, legId: string) =>
@@ -378,6 +380,24 @@ export default function WorkDetail() {
               {w.assignee ? `Assigned to ${w.assignee}` : 'Not yet assigned'}
             </div>
           )}
+          {deptResources.length > 0 &&
+            (mayDelegate ? (
+              <Field label={w.department === 'IT' ? 'Device / equipment' : 'Equipment'}>
+                <Sel value={w.resource ?? ''} onChange={(v) => updateWorkItem(w.id, { resource: v })}>
+                  <option value="">None…</option>
+                  {deptResources.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </Sel>
+              </Field>
+            ) : (
+              w.resource && (
+                <div className="detail-meta">
+                  <i className="ti ti-package" />
+                  {w.resource}
+                </div>
+              )
+            ))}
           {mayDelegate ? (
             <Field label="Scheduled for">
               <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value, status: w.status === 'Assigned' && e.target.value ? 'Scheduled' : w.status })} />

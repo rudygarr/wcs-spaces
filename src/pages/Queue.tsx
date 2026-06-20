@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { assignedToMe } from '../lib/fulfill';
+import { assignedToMe, canDelegate } from '../lib/fulfill';
 import type { Department, Priority, WorkItem, WorkStatus } from '../lib/types';
 
 const DEPTS: { id: Department; icon: string; cls: string }[] = [
@@ -44,6 +44,7 @@ export default function Queue() {
   const [showDone, setShowDone] = useState(false);
 
   const myCount = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
+  const canManageCrew = (['Maintenance', 'IT', 'Transportation'] as Department[]).some((d) => canDelegate(user, d));
 
   const items = db.workItems
     .filter((w) => (dept === 'All' ? true : w.department === dept))
@@ -88,6 +89,11 @@ export default function Queue() {
           <button className={'qchip' + (mineOnly ? ' on' : '')} onClick={() => setMineOnly((v) => !v)}>
             <i className="ti ti-user-check" /> Assigned to me
             <span className="qcount">{myCount}</span>
+          </button>
+        )}
+        {canManageCrew && (
+          <button className="qchip" onClick={() => nav(dept === 'All' ? '/team' : `/team?dept=${dept}`)}>
+            <i className="ti ti-users-group" /> Manage crew
           </button>
         )}
       </div>

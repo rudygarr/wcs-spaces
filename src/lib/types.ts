@@ -120,6 +120,9 @@ export interface WorkItem {
   setupStyle?: string;
   eventId?: string;
   trip?: Trip;
+  // A piece of equipment/device assigned to this job (e.g. a loaner TV for IT,
+  // a tent for Maintenance) — the non-trip equivalent of assigning a bus.
+  resource?: string;
 }
 
 export interface Driver {
