@@ -69,6 +69,29 @@ export function eventInConflict(db: Database, e: EventRec): boolean {
   return findConflicts(dayEvents).some((c) => c.a.id === e.id || c.b.id === e.id);
 }
 
+// ---- Directory badges: is this room / resource contested right now? ----
+// A room is flagged if it has an upcoming real booking clash.
+export function roomHasConflict(db: Database, roomName: string): boolean {
+  const dayStart = new Date(DEMO_TODAY);
+  dayStart.setHours(0, 0, 0, 0);
+  return findConflicts(db.events).some(
+    (c) => c.room === roomName && new Date(c.a.starts_at!).getTime() >= dayStart.getTime(),
+  );
+}
+
+// A resource (e.g. a bus) is flagged if it's on an unresolved double-booking.
+export function resourceHasConflict(db: Database, resourceName: string): boolean {
+  return db.workItems.some(
+    (w) =>
+      !!w.trip &&
+      w.trip.legs.some((l) => l.bus === resourceName) &&
+      w.trip.legs.some((l) => {
+        const c = legCollision(db, w, l);
+        return c.has && !c.resolved && c.busTrip !== null && l.bus === resourceName;
+      }),
+  );
+}
+
 // ---- Unified list for the dashboard ----
 export function allConflicts(db: Database): ConflictItem[] {
   const out: ConflictItem[] = [];

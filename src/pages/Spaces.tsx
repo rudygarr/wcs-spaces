@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, groupByFolder } from '../lib/store';
+import { roomHasConflict, resourceHasConflict } from '../lib/conflicts';
 import Modal, { field, primaryBtn } from '../components/Modal';
 
 type Tab = 'rooms' | 'resources';
@@ -104,23 +105,32 @@ export default function Spaces() {
                 <span className="count">{f.items.length}</span>
               </div>
               <div className="list">
-                {f.items.map((item, i) => (
-                  <div key={item.id}>
-                    {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
-                    <button
-                      className="space-row"
-                      onClick={() => tab === 'rooms' && nav('/room/' + item.id)}
-                      style={tab === 'resources' ? { cursor: 'default' } : undefined}
-                    >
-                      <span className="space-ico">
-                        <i className={'ti ' + (icons[f.name] || 'ti-point')} />
-                      </span>
-                      <span className="nm">{item.name}</span>
-                      <span className="meta">{counts.get(item.name) ? `${counts.get(item.name)} bookings` : '—'}</span>
-                      {tab === 'rooms' && <i className="ti ti-chevron-right chev" />}
-                    </button>
-                  </div>
-                ))}
+                {f.items.map((item, i) => {
+                  const contested =
+                    tab === 'rooms' ? roomHasConflict(db, item.name) : resourceHasConflict(db, item.name);
+                  return (
+                    <div key={item.id}>
+                      {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
+                      <button
+                        className="space-row"
+                        onClick={() => tab === 'rooms' && nav('/room/' + item.id)}
+                        style={tab === 'resources' ? { cursor: 'default' } : undefined}
+                      >
+                        <span className="space-ico">
+                          <i className={'ti ' + (icons[f.name] || 'ti-point')} />
+                        </span>
+                        <span className="nm" style={contested ? { color: 'var(--warn)' } : undefined}>
+                          {contested && (
+                            <i className="ti ti-alert-triangle" style={{ color: 'var(--warn)', fontSize: 14, marginRight: 5 }} />
+                          )}
+                          {item.name}
+                        </span>
+                        <span className="meta">{counts.get(item.name) ? `${counts.get(item.name)} bookings` : '—'}</span>
+                        {tab === 'rooms' && <i className="ti ti-chevron-right chev" />}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
