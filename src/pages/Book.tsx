@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { dayKey, DEMO_TODAY } from '../lib/data';
+import { dayKey, DEMO_TODAY, fmtDateLong } from '../lib/data';
+import { blackoutFor } from '../lib/calendar';
 import { field, primaryBtn } from '../components/Modal';
 import { SetupDiagram, setupStyles } from '../components/SetupDiagram';
 import type { Template } from '../lib/types';
@@ -15,6 +16,12 @@ for (let h = 6; h <= 21; h++) {
     const hr = h % 12 === 0 ? 12 : h % 12;
     TIME_OPTS.push({ v, label: `${hr}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}` });
   }
+}
+
+// Step a YYYY-MM-DD key by n days, anchored at UTC noon so DST never shifts the date.
+function addDaysKey(key: string, n: number): string {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n, 12)).toISOString().slice(0, 10);
 }
 
 function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -36,7 +43,7 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
 
 export default function Book() {
   const nav = useNavigate();
-  const { db, addEvent, addTemplate, removeTemplate } = useStore();
+  const { db, addEvent, addEvents, addTemplate, removeTemplate } = useStore();
   const { user } = useSession();
   const [params] = useSearchParams();
 
@@ -49,10 +56,35 @@ export default function Book() {
   const [setupStyle, setSetupStyle] = useState<string>('');
   const [details, setDetails] = useState('');
   const [done, setDone] = useState<string | null>(null);
+  const [doneCount, setDoneCount] = useState(1);
   const [activeTpl, setActiveTpl] = useState<string>('');
+  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'biweekly'>('none');
+  const [until, setUntil] = useState(addDaysKey(date, 56));
 
   const isAdmin = user.site_admin;
   const templates = db.templates.filter((t) => t.door === 'book');
+
+  // The concrete dates this booking lands on, given the repeat setting. One-off
+  // bookings are just [date]; recurring ones step weekly/biweekly through `until`
+  // (capped so a runaway range can't generate hundreds of events).
+  const RECUR_CAP = 60;
+  const effectiveUntil = until >= date ? until : addDaysKey(date, 56);
+  const instances: string[] = (() => {
+    if (repeat === 'none') return [date];
+    const step = repeat === 'weekly' ? 7 : 14;
+    const out: string[] = [];
+    let k = date;
+    while (k <= effectiveUntil && out.length < RECUR_CAP) {
+      out.push(k);
+      k = addDaysKey(k, step);
+    }
+    return out;
+  })();
+  const blackoutHits = instances.map((k) => ({ k, b: blackoutFor(k) })).filter((x) => x.b);
+  const recurLabel =
+    repeat === 'none'
+      ? null
+      : `${repeat === 'weekly' ? 'Weekly' : 'Every other week'} through ${fmtDateLong(new Date(effectiveUntil + 'T12:00'))}`;
 
   function toggle(list: string[], set: (v: string[]) => void, val: string) {
     set(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
@@ -88,16 +120,12 @@ export default function Book() {
 
   function submit() {
     if (!name.trim() || rooms.length === 0) return;
-    const starts = new Date(`${date}T${start}`).toISOString();
-    const ends = new Date(`${date}T${end}`).toISOString();
-    const ev = addEvent({
+    const base = {
       name: name.trim(),
-      starts_at: starts,
-      ends_at: ends,
       all_day: false,
       setup_starts: null,
       teardown_ends: null,
-      recurrence: null,
+      recurrence: recurLabel,
       location: rooms[0] ?? null,
       owner: user.name,
       // Admins' own bookings auto-approve; everyone else lands in the queue.
@@ -107,8 +135,15 @@ export default function Book() {
       rooms,
       resources,
       setupStyle: setupStyle || undefined,
-    });
-    setDone(ev.id);
+    };
+    const payloads = instances.map((k) => ({
+      ...base,
+      starts_at: new Date(`${k}T${start}`).toISOString(),
+      ends_at: new Date(`${k}T${end}`).toISOString(),
+    }));
+    const created = payloads.length === 1 ? [addEvent(payloads[0])] : addEvents(payloads);
+    setDoneCount(created.length);
+    setDone(created[0].id);
   }
 
   if (done) {
@@ -122,9 +157,13 @@ export default function Book() {
           {isAdmin ? 'Booked' : 'Request sent'}
         </h1>
         <div className="page-sub" style={{ maxWidth: 320, margin: '0 auto 26px' }}>
-          {isAdmin
+          {doneCount > 1 ? (
+            isAdmin
+              ? `${doneCount} dates of ${name} are confirmed and on the calendar.`
+              : `${doneCount} dates of ${name} are pending approval. You'll be notified once a space owner signs off.`
+          ) : isAdmin
             ? `${name} is confirmed and on the calendar.`
-            : `${name} is pending approval. You'll be notified once a space admin signs off.`}
+            : `${name} is pending approval. You'll be notified once a space owner signs off.`}
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button className="btn-soft" onClick={() => nav('/event/' + done)}>
@@ -192,6 +231,44 @@ export default function Book() {
         </div>
       </div>
 
+      <label className="flabel">Repeats</label>
+      <div className="seg seg-sm" style={{ marginBottom: repeat === 'none' ? 0 : 12 }}>
+        <button className={repeat === 'none' ? 'active' : ''} onClick={() => setRepeat('none')}>
+          Once
+        </button>
+        <button className={repeat === 'weekly' ? 'active' : ''} onClick={() => setRepeat('weekly')}>
+          Weekly
+        </button>
+        <button className={repeat === 'biweekly' ? 'active' : ''} onClick={() => setRepeat('biweekly')}>
+          Every 2 wks
+        </button>
+      </div>
+      {repeat !== 'none' && (
+        <>
+          <label className="flabel">Repeat until</label>
+          <input style={field} type="date" value={until} min={date} onChange={(e) => setUntil(e.target.value)} />
+          <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '2px 0 4px' }}>
+            <i className="ti ti-repeat" style={{ marginRight: 5 }} />
+            {recurLabel} · <b>{instances.length}</b> date{instances.length === 1 ? '' : 's'}
+            {instances.length >= RECUR_CAP ? ` (capped at ${RECUR_CAP})` : ''}
+          </div>
+        </>
+      )}
+
+      {blackoutHits.length > 0 && (
+        <div className="ins-card" style={{ borderColor: 'var(--warn)', background: 'var(--warn-tint)', padding: '11px 13px', margin: '6px 0 2px' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--warn)', fontWeight: 600, fontSize: 14 }}>
+            <i className="ti ti-calendar-off" />
+            {blackoutHits.length === 1
+              ? `${fmtDateLong(new Date(blackoutHits[0].k + 'T12:00'))} is a no-school day`
+              : `${blackoutHits.length} of these dates fall on no-school days`}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 5 }}>
+            {[...new Set(blackoutHits.map((h) => h.b!.label))].join(', ')}. You can still book — just confirming you meant to.
+          </div>
+        </div>
+      )}
+
       <label className="flabel">Room{rooms.length > 0 ? ` · ${rooms.length} selected` : ''}</label>
       <div className="chips">
         {db.rooms.map((r) => (
@@ -248,6 +325,7 @@ export default function Book() {
         disabled={!name.trim() || rooms.length === 0}
       >
         {isAdmin ? 'Book it' : 'Send request'}
+        {instances.length > 1 ? ` · ${instances.length} dates` : ''}
       </button>
 
       {rooms.length > 0 && (

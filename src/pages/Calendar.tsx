@@ -13,6 +13,7 @@ import {
   statusColor,
   isMine,
 } from '../lib/data';
+import { blackoutForDate } from '../lib/calendar';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 
@@ -92,6 +93,15 @@ export default function Calendar() {
           <i className="ti ti-plus" /> Book
         </button>
       </div>
+
+      {blackoutForDate(day) && (
+        <div className="banner" style={{ background: 'var(--info-tint, var(--surface-2))', borderColor: 'var(--info)', color: 'var(--info)' }}>
+          <i className="ti ti-calendar-off" />
+          <span>
+            <b>No school</b> — {blackoutForDate(day)!.label}.
+          </span>
+        </div>
+      )}
 
       {conflicts.length > 0 && (
         <div className="banner">

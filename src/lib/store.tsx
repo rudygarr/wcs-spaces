@@ -14,6 +14,7 @@ interface StoreCtx {
   addPerson: (p: Omit<PersonRec, 'id'>) => PersonRec;
   updatePerson: (id: string, patch: Partial<PersonRec>) => void;
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
+  addEvents: (list: Omit<EventRec, 'id'>[]) => EventRec[];
   updateEvent: (id: string, patch: Partial<EventRec>) => void;
   reassignOwner: (fromName: string, toName: string) => void;
   addWorkItem: (w: Omit<WorkItem, 'id'>) => WorkItem;
@@ -87,6 +88,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const ev: EventRec = { ...e, id: uid('e') };
       commit((d) => ({ ...d, events: [...d.events, ev] }));
       return ev;
+    },
+    addEvents(list) {
+      const evs: EventRec[] = list.map((e) => ({ ...e, id: uid('e') }));
+      commit((d) => ({ ...d, events: [...d.events, ...evs] }));
+      return evs;
     },
     updateEvent(id, patch) {
       commit((d) => ({ ...d, events: d.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
