@@ -5,10 +5,38 @@ import { useSession } from '../lib/session';
 import { dayKey, DEMO_TODAY } from '../lib/data';
 import { field, primaryBtn } from '../components/Modal';
 import { SetupDiagram, setupStyles } from '../components/SetupDiagram';
+import type { Template } from '../lib/types';
+
+// 6:00 a.m. → 9:00 p.m. in 15-min steps for the time dropdowns.
+const TIME_OPTS: { v: string; label: string }[] = [];
+for (let h = 6; h <= 21; h++) {
+  for (const m of [0, 15, 30, 45]) {
+    const v = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const hr = h % 12 === 0 ? 12 : h % 12;
+    TIME_OPTS.push({ v, label: `${hr}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}` });
+  }
+}
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const known = TIME_OPTS.some((t) => t.v === value);
+  return (
+    <div style={{ position: 'relative' }}>
+      <select style={{ ...field, appearance: 'none', paddingRight: 30 }} value={value} onChange={(e) => onChange(e.target.value)}>
+        {!known && value && <option value={value}>{value}</option>}
+        {TIME_OPTS.map((t) => (
+          <option key={t.v} value={t.v}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+      <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 11, top: 13, color: 'var(--text-3)', pointerEvents: 'none' }} />
+    </div>
+  );
+}
 
 export default function Book() {
   const nav = useNavigate();
-  const { db, addEvent } = useStore();
+  const { db, addEvent, addTemplate, removeTemplate } = useStore();
   const { user } = useSession();
   const [params] = useSearchParams();
 
@@ -21,11 +49,41 @@ export default function Book() {
   const [setupStyle, setSetupStyle] = useState<string>('');
   const [details, setDetails] = useState('');
   const [done, setDone] = useState<string | null>(null);
+  const [activeTpl, setActiveTpl] = useState<string>('');
 
   const isAdmin = user.site_admin;
+  const templates = db.templates.filter((t) => t.door === 'book');
 
   function toggle(list: string[], set: (v: string[]) => void, val: string) {
     set(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  }
+
+  // Tapping a template fills everything in — the requester just picks date/time.
+  function applyTemplate(t: Template) {
+    if (activeTpl === t.id) {
+      setActiveTpl('');
+      return;
+    }
+    setActiveTpl(t.id);
+    if (!name.trim()) setName(t.name);
+    setRooms(t.rooms ?? []);
+    setResources(t.resources ?? []);
+    setSetupStyle(t.setupStyle ?? '');
+    if (t.details) setDetails(t.details);
+  }
+
+  // Save the current selection as a reusable template.
+  function saveAsTemplate() {
+    const tn = window.prompt('Name this template', name.trim() || 'My setup');
+    if (!tn) return;
+    addTemplate({
+      door: 'book',
+      name: tn.trim(),
+      rooms,
+      resources,
+      setupStyle: setupStyle || undefined,
+      details: details.trim() || undefined,
+    });
   }
 
   function submit() {
@@ -88,6 +146,35 @@ export default function Book() {
         {isAdmin ? 'auto-approved' : 'needs approval'}
       </div>
 
+      {templates.length > 0 && (
+        <>
+          <label className="flabel">Start from a template</label>
+          <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>
+            Tap one to fill in the room, setup, and gear — then just pick a date.
+          </div>
+          <div className="tpl-row">
+            {templates.map((t) => (
+              <button key={t.id} type="button" className={'tpl-chip' + (activeTpl === t.id ? ' on' : '')} onClick={() => applyTemplate(t)}>
+                <i className="ti ti-bookmark" />
+                <span>{t.name}</span>
+                {!t.builtIn && (
+                  <i
+                    className="ti ti-x tpl-del"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete the "${t.name}" template?`)) {
+                        if (activeTpl === t.id) setActiveTpl('');
+                        removeTemplate(t.id);
+                      }
+                    }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <label className="flabel">Event name</label>
       <input style={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Booster Club meeting" autoFocus />
 
@@ -97,11 +184,11 @@ export default function Book() {
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}>
           <label className="flabel">Start</label>
-          <input style={field} type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+          <TimeSelect value={start} onChange={setStart} />
         </div>
         <div style={{ flex: 1 }}>
           <label className="flabel">End</label>
-          <input style={field} type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <TimeSelect value={end} onChange={setEnd} />
         </div>
       </div>
 
@@ -162,6 +249,12 @@ export default function Book() {
       >
         {isAdmin ? 'Book it' : 'Send request'}
       </button>
+
+      {rooms.length > 0 && (
+        <button className="btn-soft" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }} onClick={saveAsTemplate}>
+          <i className="ti ti-bookmark-plus" /> Save this as a template
+        </button>
+      )}
       <div style={{ height: 20 }} />
     </>
   );

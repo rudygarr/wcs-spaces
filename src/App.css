@@ -1130,3 +1130,47 @@
 .leg-head i {
   color: var(--text-3);
 }
+
+/* ---- Template chips (Book) ---- */
+.tpl-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.tpl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border-2);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tpl-chip i.ti-bookmark {
+  color: var(--gold);
+  font-size: 15px;
+}
+.tpl-chip.on {
+  background: var(--green-tint);
+  border-color: var(--green);
+  color: var(--green);
+}
+.tpl-chip.on i.ti-bookmark {
+  color: var(--green);
+}
+.tpl-chip .tpl-del {
+  color: var(--text-3);
+  font-size: 14px;
+  margin-left: 2px;
+  padding: 2px;
+  border-radius: 6px;
+}
+.tpl-chip .tpl-del:hover {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
