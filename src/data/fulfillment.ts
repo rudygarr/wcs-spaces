@@ -1,4 +1,18 @@
-import type { WorkItem, Driver, Template } from '../lib/types';
+import type { WorkItem, Driver, Template, Department } from '../lib/types';
+
+// Which real staff sit on each department's crew, and who can delegate (Lead)
+// vs. who just receives work (Tech). Applied onto the harvested people list in
+// buildSeed. Demo guesses — easy to correct once the real leads weigh in.
+export const deptStaff: Record<string, { department: Department; deptRole: 'Lead' | 'Tech' }> = {
+  'Tony Rodriguez': { department: 'Maintenance', deptRole: 'Lead' },
+  'Jose Oviedo': { department: 'Maintenance', deptRole: 'Tech' },
+  'Ariel Triana': { department: 'Maintenance', deptRole: 'Tech' },
+  'Cesar Mejia': { department: 'Maintenance', deptRole: 'Tech' },
+  'Rob Lundgren': { department: 'IT', deptRole: 'Lead' },
+  'Lazaro (Laz) Ospina': { department: 'IT', deptRole: 'Tech' },
+  'Louis Moll': { department: 'IT', deptRole: 'Tech' },
+  'PJ Brown': { department: 'Transportation', deptRole: 'Lead' },
+};
 
 // Demo fulfillment data: the work items already sitting in each department's
 // queue, the driver roster transportation picks from, and a few starter

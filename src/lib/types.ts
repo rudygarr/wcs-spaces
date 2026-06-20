@@ -72,6 +72,10 @@ export interface PersonRec extends Person {
   // but keep their history. `following` = person ids whose calendar this user follows.
   active?: boolean;
   following?: string[];
+  // Fulfillment role: which department this person works in, and whether they
+  // can delegate (Lead) or only act on what they're assigned (Tech).
+  department?: Department;
+  deptRole?: 'Lead' | 'Tech';
 }
 
 export interface EventRec extends WcsEvent {

@@ -34,7 +34,9 @@ export function initials(name: string): string {
     .toUpperCase();
 }
 
-export function roleLabel(p: { site_admin: boolean; rooms: string; resources: string; event: string }): string {
+export function roleLabel(p: { site_admin: boolean; rooms: string; resources: string; event: string; department?: string; deptRole?: string }): string {
+  // A department role is the most relevant hat when they have one.
+  if (p.department) return `${p.department} · ${p.deptRole ?? 'Team'}`;
   if (p.site_admin) return 'Administrator';
   if (p.rooms === 'Editor' || p.resources === 'Editor') return 'Editor';
   if (p.event?.includes('Creator')) return 'Event creator';

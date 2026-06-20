@@ -3,13 +3,13 @@ import rawPeople from '../data/people.json';
 import rawPublic from '../data/public-events.json';
 import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
-import { seedDrivers, seedWorkItems, seedTemplates } from '../data/fulfillment';
+import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 6;
 
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
@@ -20,7 +20,11 @@ export function buildSeed(): Database {
   const resources = resourceFolders.flatMap((f, fi) =>
     f.items.map((name, i) => ({ id: `res-${fi}-${i}`, name, folder: f.name })),
   );
-  const people: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({ ...p, id: `p-${i}` }));
+  const people: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({
+    ...p,
+    id: `p-${i}`,
+    ...(deptStaff[p.name] ?? {}),
+  }));
   // Internal bookings harvested from Planning Center, plus the public master
   // calendar pulled from the school's iCal feed.
   const internal: EventRec[] = (rawEvents as WcsEvent[])

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { useSession } from '../lib/session';
+import { assignedToMe } from '../lib/fulfill';
 import type { Department, Priority, WorkItem, WorkStatus } from '../lib/types';
 
 const DEPTS: { id: Department; icon: string; cls: string }[] = [
@@ -34,13 +36,18 @@ function fmtDay(iso?: string): string {
 export default function Queue() {
   const nav = useNavigate();
   const { db } = useStore();
+  const { user } = useSession();
   const [params, setParams] = useSearchParams();
   const deptParam = params.get('dept') as Department | null;
   const [dept, setDept] = useState<Department | 'All'>(deptParam ?? 'All');
+  const [mineOnly, setMineOnly] = useState(params.get('mine') === '1');
   const [showDone, setShowDone] = useState(false);
+
+  const myCount = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
 
   const items = db.workItems
     .filter((w) => (dept === 'All' ? true : w.department === dept))
+    .filter((w) => (mineOnly ? assignedToMe(w, user) : true))
     .filter((w) => (showDone ? true : w.status !== 'Done'))
     .sort((a, b) => {
       const sa = STATUS_ORDER.indexOf(a.status);
@@ -77,6 +84,12 @@ export default function Queue() {
             <span className="qcount">{openCount(d.id)}</span>
           </button>
         ))}
+        {myCount > 0 && (
+          <button className={'qchip' + (mineOnly ? ' on' : '')} onClick={() => setMineOnly((v) => !v)}>
+            <i className="ti ti-user-check" /> Assigned to me
+            <span className="qcount">{myCount}</span>
+          </button>
+        )}
       </div>
 
       {groups.length === 0 && <div className="empty">Nothing in this queue.</div>}

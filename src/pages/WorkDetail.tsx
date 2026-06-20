@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { useSession } from '../lib/session';
+import { canDelegate, deptTeam, assignedToMe } from '../lib/fulfill';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import { statusTint, priorityColor } from './Queue';
-import type { TripLeg, WorkStatus } from '../lib/types';
+import type { Priority, TripLeg, WorkItem, WorkStatus } from '../lib/types';
 
 const STATUSES: WorkStatus[] = ['New', 'Assigned', 'Scheduled', 'In progress', 'Done'];
+const PRIORITIES: Priority[] = ['Low', 'Normal', 'High', 'Urgent'];
 
 // 6:00 a.m. → 9:00 p.m. in 15-min steps, for the time dropdowns.
 const TIMES: { v: string; label: string }[] = [];
@@ -51,10 +54,55 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function timeLabel(v?: string): string {
+  if (!v) return 'Time TBD';
+  const t = TIMES.find((x) => x.v === v);
+  return t ? t.label : v;
+}
+
+// What a driver or a coach sees: the trip, laid out, nothing to edit.
+function ReadOnlyTrip({ w }: { w: WorkItem }) {
+  if (!w.trip) return null;
+  return (
+    <>
+      <div className="section-label" style={{ marginTop: 22 }}>
+        <span className="lbl">Trip</span>
+      </div>
+      {w.scheduledFor && (
+        <div className="detail-meta">
+          <i className="ti ti-calendar" />
+          {new Date(w.scheduledFor + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+        </div>
+      )}
+      {w.trip.legs.map((leg) => (
+        <div key={leg.id} className="leg">
+          <div className="leg-head">
+            <i className={'ti ' + (leg.kind === 'Outbound' ? 'ti-arrow-right' : 'ti-arrow-back-up')} />
+            {leg.kind} {w.trip!.destination ? (leg.kind === 'Outbound' ? '→ ' + w.trip!.destination : '→ WCS') : ''}
+          </div>
+          <div className="detail-meta" style={{ margin: 0 }}>
+            <i className="ti ti-clock" />
+            {timeLabel(leg.time)}
+          </div>
+          <div className="detail-meta" style={{ margin: '6px 0 0' }}>
+            <i className="ti ti-steering-wheel" />
+            {leg.driver || 'Driver TBD'}
+          </div>
+          <div className="detail-meta" style={{ margin: '6px 0 0' }}>
+            <i className="ti ti-bus" />
+            {leg.bus || 'Vehicle TBD'}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function WorkDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const { db, updateWorkItem, addDriver } = useStore();
+  const { user } = useSession();
   const w = db.workItems.find((x) => x.id === id);
   const [addingDriver, setAddingDriver] = useState(false);
   const [newDriver, setNewDriver] = useState('');
@@ -70,7 +118,13 @@ export default function WorkDetail() {
     );
   }
 
-  const staff = [...db.people].filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name));
+  // Delegation permissions: a department Lead (or site admin) can assign and
+  // re-route work; the person it's assigned to can move it along; anyone else
+  // just watches. Mirrors how the production backend will gate these actions.
+  const mayDelegate = canDelegate(user, w.department);
+  const mine = assignedToMe(w, user);
+  const mayProgress = mayDelegate || mine;
+  const team = deptTeam(db.people, w.department);
   const drivers = db.drivers.filter((d) => d.active !== false);
   const buses = db.resources.filter((r) => r.folder === 'Transportation').map((r) => r.name);
 
@@ -170,20 +224,61 @@ export default function WorkDetail() {
         </div>
       )}
 
+      {/* Who's allowed to act, so the demo reads clearly when "viewing as" someone. */}
+      <div className="banner" style={{ background: 'var(--surface-2)', borderColor: 'transparent', color: 'var(--text-2)', marginTop: 18 }}>
+        <i className={'ti ' + (mayDelegate ? 'ti-arrows-split-2' : mine ? 'ti-user-check' : 'ti-eye')} style={{ color: mayDelegate ? 'var(--green)' : mine ? 'var(--gold)' : 'var(--text-3)' }} />
+        <span>
+          {mayDelegate
+            ? user.department === w.department
+              ? `You lead ${w.department} — assign this to your crew and set its priority.`
+              : `As an administrator, you can assign this to the ${w.department} crew and set its priority.`
+            : mine
+              ? 'This is assigned to you — move it along as you work it.'
+              : `Read-only — only ${w.department} can assign and update this.`}
+        </span>
+      </div>
+
       {/* ---- Status pipeline ---- */}
       <div className="section-label" style={{ marginTop: 22 }}>
         <span className="lbl">Status</span>
       </div>
       <div className="statusbar">
         {STATUSES.map((s) => (
-          <button key={s} className={'statusstep' + (w.status === s ? ' on' : '')} onClick={() => setStatus(s)}>
+          <button
+            key={s}
+            className={'statusstep' + (w.status === s ? ' on' : '')}
+            disabled={!mayProgress}
+            style={!mayProgress ? { opacity: w.status === s ? 1 : 0.45, cursor: 'default' } : undefined}
+            onClick={() => mayProgress && setStatus(s)}
+          >
             {s}
           </button>
         ))}
       </div>
 
+      {mayDelegate && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Priority</span>
+          </div>
+          <div className="statusbar">
+            {PRIORITIES.map((p) => (
+              <button
+                key={p}
+                className={'statusstep' + (w.priority === p ? ' on' : '')}
+                style={w.priority === p ? { borderColor: priorityColor(p), color: priorityColor(p), background: 'color-mix(in srgb, ' + priorityColor(p) + ' 12%, transparent)' } : undefined}
+                onClick={() => updateWorkItem(w.id, { priority: p })}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* ---- Transportation dispatch ---- */}
       {isTransport ? (
+        mayDelegate ? (
         <>
           <div className="section-label" style={{ marginTop: 22 }}>
             <span className="lbl">Trip — assign a bus &amp; driver per leg</span>
@@ -257,22 +352,44 @@ export default function WorkDetail() {
             </div>
           )}
         </>
+        ) : (
+          <ReadOnlyTrip w={w} />
+        )
       ) : (
         <>
           <div className="section-label" style={{ marginTop: 22 }}>
-            <span className="lbl">Assign &amp; schedule</span>
+            <span className="lbl">{mayDelegate ? 'Delegate & schedule' : 'Assignment'}</span>
           </div>
-          <Field label="Assigned to">
-            <Sel value={w.assignee ?? ''} onChange={(v) => updateWorkItem(w.id, { assignee: v, status: w.status === 'New' && v ? 'Assigned' : w.status })}>
-              <option value="">Unassigned…</option>
-              {staff.map((p) => (
-                <option key={p.id}>{p.name}</option>
-              ))}
-            </Sel>
-          </Field>
-          <Field label="Scheduled for">
-            <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value, status: w.status === 'Assigned' && e.target.value ? 'Scheduled' : w.status })} />
-          </Field>
+          {mayDelegate ? (
+            <Field label="Delegate to">
+              <Sel value={w.assignee ?? ''} onChange={(v) => updateWorkItem(w.id, { assignee: v, status: w.status === 'New' && v ? 'Assigned' : w.status })}>
+                <option value="">Unassigned…</option>
+                {team.map((p) => (
+                  <option key={p.id}>
+                    {p.name}
+                    {p.deptRole ? ` · ${p.deptRole}` : ''}
+                  </option>
+                ))}
+              </Sel>
+            </Field>
+          ) : (
+            <div className="detail-meta" style={{ marginBottom: 6 }}>
+              <i className="ti ti-user-check" />
+              {w.assignee ? `Assigned to ${w.assignee}` : 'Not yet assigned'}
+            </div>
+          )}
+          {mayDelegate ? (
+            <Field label="Scheduled for">
+              <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value, status: w.status === 'Assigned' && e.target.value ? 'Scheduled' : w.status })} />
+            </Field>
+          ) : (
+            w.scheduledFor && (
+              <div className="detail-meta">
+                <i className="ti ti-calendar" />
+                Scheduled for {new Date(w.scheduledFor + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </div>
+            )
+          )}
         </>
       )}
 

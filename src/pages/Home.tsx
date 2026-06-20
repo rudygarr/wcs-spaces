@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusColor, isMine } from '../lib/data';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
+import { assignedToMe } from '../lib/fulfill';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -30,6 +31,7 @@ export default function Home() {
   const conflicts = findConflicts(today);
   const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
   const openWork = (dept: string) => db.workItems.filter((w) => w.department === dept && w.status !== 'Done').length;
+  const myTasks = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
   const deptQueues = [
     { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
     { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
@@ -112,6 +114,23 @@ export default function Home() {
           );
         })}
       </div>
+
+      {myTasks > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/queue?mine=1')}
+          style={{ width: '100%', background: 'var(--green-tint)', border: '0.5px solid var(--green)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-ath" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-user-check" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--green)' }}>Assigned to you</span>
+            <span className="sub">{myTasks} task{myTasks === 1 ? '' : 's'} on your plate</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
 
       <div className="section-label">
         <span className="lbl">Work queues</span>
