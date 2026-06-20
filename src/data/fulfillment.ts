@@ -132,14 +132,17 @@ export const seedWorkItems: WorkItem[] = [
     title: 'Varsity Soccer @ Pine Crest',
     requestedBy: 'Athletics',
     createdAt: '2026-08-19T10:00:00-04:00',
-    status: 'New',
+    status: 'Scheduled',
     priority: 'Normal',
     location: 'Pine Crest School',
     details: '18 players + 3 staff. Depart after early dismissal.',
+    scheduledFor: '2026-08-22',
     trip: {
       destination: 'Pine Crest School',
       legs: [
-        { id: 'lg-1', kind: 'Outbound', time: '14:45' },
+        // Same day, same driver & bus as the Track meet (w-t2) — a real
+        // double-booking for dispatch to notice and shuttle around.
+        { id: 'lg-1', kind: 'Outbound', time: '15:00', bus: 'Warrior Bus 3 (28 plus driver)', driver: 'Lorenzo Diaz' },
         { id: 'lg-2', kind: 'Return', time: '' },
       ],
     },

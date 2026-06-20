@@ -9,7 +9,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif } from './t
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 7;
+export const SEED_VERSION = 8;
 
 // Derive starter notifications from the seeded assignments, so each crew
 // member already has a ringing bell when you "view as" them.

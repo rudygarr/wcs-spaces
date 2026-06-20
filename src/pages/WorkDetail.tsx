@@ -140,6 +140,18 @@ export default function WorkDetail() {
         other.trip?.legs.some((l) => l.bus === bus),
     ) || (w.trip?.legs.some((l) => l.id !== legId && l.bus === bus) ?? false);
 
+  // A double-booking is something to flag, not forbid (the shuttle exception):
+  // these name the *other* trip a driver/bus already serves on the same day.
+  // A driver on multiple legs of THIS trip is intentional, so not flagged.
+  const driverBookedElsewhere = (driver: string): string | null =>
+    db.workItems.find(
+      (o) => o.id !== w.id && o.scheduledFor && o.scheduledFor === w.scheduledFor && o.trip?.legs.some((l) => l.driver === driver),
+    )?.title ?? null;
+  const busBookedElsewhere = (bus: string): string | null =>
+    db.workItems.find(
+      (o) => o.id !== w.id && o.scheduledFor && o.scheduledFor === w.scheduledFor && o.trip?.legs.some((l) => l.bus === bus),
+    )?.title ?? null;
+
   function setStatus(s: WorkStatus) {
     updateWorkItem(w!.id, { status: s });
     // Close the loop: tell the requester when their request is done.
@@ -302,8 +314,12 @@ export default function WorkDetail() {
           <Field label="Scheduled date">
             <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value })} />
           </Field>
-          {w.trip!.legs.map((leg) => (
-            <div key={leg.id} className="leg">
+          {w.trip!.legs.map((leg) => {
+            const dConflict = leg.driver ? driverBookedElsewhere(leg.driver) : null;
+            const bConflict = leg.bus ? busBookedElsewhere(leg.bus) : null;
+            const hasConflict = !!(dConflict || bConflict);
+            return (
+            <div key={leg.id} className="leg" style={hasConflict && !leg.conflictOk ? { borderColor: 'var(--warn)' } : undefined}>
               <div className="leg-head">
                 <i className={'ti ' + (leg.kind === 'Outbound' ? 'ti-arrow-right' : 'ti-arrow-back-up')} />
                 {leg.kind} {w.trip!.destination ? (leg.kind === 'Outbound' ? '→ ' + w.trip!.destination : '→ WCS') : ''}
@@ -325,7 +341,10 @@ export default function WorkDetail() {
                   <Sel value={leg.driver ?? ''} onChange={(v) => (v === '__add' ? setAddingDriver(true) : updateLeg(leg.id, { driver: v }))}>
                     <option value="">Pick driver…</option>
                     {drivers.map((d) => (
-                      <option key={d.id}>{d.name}</option>
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                        {leg.driver !== d.name && driverBookedElsewhere(d.name) ? '  — driving elsewhere' : ''}
+                      </option>
                     ))}
                     <option value="__add">+ Add a driver…</option>
                   </Sel>
@@ -342,14 +361,32 @@ export default function WorkDetail() {
                     </option>
                   ))}
                 </Sel>
-                {leg.bus && busInUse(leg.bus, leg.id) && (
-                  <div style={{ fontSize: 12, color: 'var(--warn)', marginTop: 5 }}>
-                    <i className="ti ti-alert-triangle" /> This vehicle is already booked elsewhere that day.
-                  </div>
-                )}
               </div>
+
+              {hasConflict &&
+                (leg.conflictOk ? (
+                  <div className="conflict-ok">
+                    <span>
+                      <i className="ti ti-circle-check" /> Double-booking accepted — dispatch will shuttle.
+                    </span>
+                    <button onClick={() => updateLeg(leg.id, { conflictOk: false })}>Undo</button>
+                  </div>
+                ) : (
+                  <div className="conflict-warn">
+                    <div className="cw-msg">
+                      <i className="ti ti-alert-triangle" />
+                      <span>
+                        {dConflict && <>Driver also on <b>{dConflict}</b> that day. </>}
+                        {bConflict && <>Vehicle also on <b>{bConflict}</b> that day. </>}
+                        Fine if they can shuttle — accept to clear.
+                      </span>
+                    </div>
+                    <button onClick={() => updateLeg(leg.id, { conflictOk: true })}>Accept anyway</button>
+                  </div>
+                ))}
             </div>
-          ))}
+            );
+          })}
 
           {addingDriver && (
             <div className="leg" style={{ borderColor: 'var(--green)' }}>

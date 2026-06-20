@@ -96,6 +96,9 @@ export interface TripLeg {
   time?: string; // HH:MM
   bus?: string; // bus resource name
   driver?: string; // driver name
+  // A double-booked driver/bus is flagged, but never blocked — dispatch can
+  // accept it (the shuttle exception). Set once the human says it's fine.
+  conflictOk?: boolean;
 }
 
 export interface Trip {

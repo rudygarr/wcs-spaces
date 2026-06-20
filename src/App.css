@@ -1269,3 +1269,58 @@
   flex-shrink: 0;
   margin-top: 6px;
 }
+
+/* Trip double-booking: flag, never block (accept to resolve) */
+.conflict-warn {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.conflict-warn .cw-msg {
+  flex: 1;
+  display: flex;
+  gap: 7px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+.conflict-warn .cw-msg i {
+  color: var(--warn);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.conflict-warn button {
+  flex-shrink: 0;
+  background: var(--warn);
+  color: #1a1205;
+  border: none;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 7px 11px;
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+}
+.conflict-ok {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.conflict-ok i {
+  color: var(--ok);
+  margin-right: 4px;
+}
+.conflict-ok button {
+  background: none;
+  border: none;
+  color: var(--info);
+  font-size: 12.5px;
+  padding: 4px 6px;
+}
