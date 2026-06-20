@@ -34,6 +34,16 @@ export interface WcsEvent {
   transportation?: string | null;
   // Visual room-setup template id (see SetupDiagram) — the layout the crew builds.
   setupStyle?: string;
+  // Decisions recorded by space approvers (see lib/approvals). Only stores
+  // approvers who have acted; everyone else is implicitly still pending.
+  approvals?: ApprovalRec[];
+}
+
+export interface ApprovalRec {
+  approver: string; // person who signs off
+  area: string; // the room folder they own (what they're approving for)
+  status: 'Approved' | 'Declined';
+  at: string;
 }
 
 export interface Assignment {

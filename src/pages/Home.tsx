@@ -5,6 +5,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { assignedToMe } from '../lib/fulfill';
 import { allConflicts, CONFLICT_ICON } from '../lib/conflicts';
+import { pendingForApprover } from '../lib/approvals';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -37,6 +38,7 @@ export default function Home() {
   const myOpenReqs =
     db.workItems.filter((w) => w.requestedBy === user.name && w.status !== 'Done').length +
     db.events.filter((e) => e.owner === user.name && e.kind !== 'notice' && e.status === 'Pending').length;
+  const myApprovals = pendingForApprover(db, user.name).length;
   const deptQueues = [
     { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
     { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
@@ -161,6 +163,23 @@ export default function Home() {
           <span className="body">
             <span className="title" style={{ color: 'var(--green)' }}>Assigned to you</span>
             <span className="sub">{myTasks} task{myTasks === 1 ? '' : 's'} on your plate</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {myApprovals > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/approvals')}
+          style={{ width: '100%', background: 'var(--warn-tint)', border: '0.5px solid var(--warn)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-maint" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-stamp" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--warn)' }}>Awaiting your approval</span>
+            <span className="sub">{myApprovals} booking{myApprovals === 1 ? '' : 's'} routed to you</span>
           </span>
           <i className="ti ti-chevron-right chev" />
         </button>

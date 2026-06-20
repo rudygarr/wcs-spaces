@@ -17,6 +17,7 @@ import WorkDetail from './pages/WorkDetail';
 import Team from './pages/Team';
 import MyRequests from './pages/MyRequests';
 import Insights from './pages/Insights';
+import Approvals from './pages/Approvals';
 import './App.css';
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/team" element={<Team />} />
               <Route path="/my" element={<MyRequests />} />
               <Route path="/insights" element={<Insights />} />
+              <Route path="/approvals" element={<Approvals />} />
               <Route path="/work/:id" element={<WorkDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />

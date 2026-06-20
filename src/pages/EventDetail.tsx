@@ -2,7 +2,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtTime, fmtDateLong, statusColor, findConflicts } from '../lib/data';
+import { approvalSteps, derivedStatus, canApprove as canApproveEvent } from '../lib/approvals';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
+import type { ApprovalRec } from '../lib/types';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -27,7 +29,31 @@ export default function EventDetail() {
     (e) => e.starts_at && ev.starts_at && e.starts_at.slice(0, 10) === ev.starts_at.slice(0, 10),
   );
   const conflicted = findConflicts(dayList).some((c) => c.a.id === ev.id || c.b.id === ev.id);
-  const canApprove = user.site_admin || user.resolves_conflicts;
+
+  // Booking approval routing: each room's area owner must sign off.
+  const steps = approvalSteps(db, ev);
+  const mayApprove = canApproveEvent(user, steps);
+  const isOverride = user.site_admin || user.resolves_conflicts;
+  const pendingSteps = steps.filter((s) => s.status === 'Pending');
+  const myPending = isOverride ? pendingSteps : pendingSteps.filter((s) => s.approver === user.name);
+
+  function act(decision: 'Approved' | 'Declined') {
+    if (!ev) return;
+    const now = new Date().toISOString();
+    const next: ApprovalRec[] = [...(ev.approvals ?? [])];
+    for (const s of myPending) {
+      const rec: ApprovalRec = { approver: s.approver, area: s.area, status: decision, at: now };
+      const i = next.findIndex((a) => a.approver === s.approver);
+      if (i >= 0) next[i] = rec;
+      else next.push(rec);
+    }
+    const recomputed = steps.map((s) => {
+      const d = next.find((a) => a.approver === s.approver);
+      return { ...s, status: d?.status ?? s.status };
+    });
+    const overall = derivedStatus(recomputed, decision);
+    updateEvent(ev.id, { approvals: next, status: overall, percent_approved: overall === 'Approved' ? 100 : 0 });
+  }
 
   return (
     <>
@@ -189,29 +215,59 @@ export default function EventDetail() {
         </>
       )}
 
-      {canApprove && ev.status === 'Pending' && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <button
-            className="fab"
-            style={{ flex: 1, justifyContent: 'center' }}
-            onClick={() => updateEvent(ev.id, { status: 'Approved', percent_approved: 100 })}
-          >
-            <i className="ti ti-check" /> Approve
+      {steps.length > 0 && ev.kind !== 'notice' && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Approvals</span>
+            <span className="act">{steps.filter((s) => s.status === 'Approved').length}/{steps.length} signed off</span>
+          </div>
+          <div className="list">
+            {steps.map((s, i) => (
+              <div key={s.approver}>
+                {i > 0 && <div className="divider" style={{ marginLeft: 16 }} />}
+                <div className="row" style={{ cursor: 'default' }}>
+                  <span className="dot" style={{ background: statusColor(s.status) }} />
+                  <span className="body">
+                    <span className="title">{s.approver}</span>
+                    <span className="sub">
+                      {s.area}
+                      {s.approver === user.name ? ' · you' : ''}
+                    </span>
+                  </span>
+                  <span className="pill" style={{ background: 'color-mix(in srgb, ' + statusColor(s.status) + ' 14%, transparent)', color: statusColor(s.status) }}>
+                    {s.status === 'Pending' ? 'Awaiting' : s.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {ev.status === 'Pending' && pendingSteps.length > 0 && (
+            <div className="page-sub" style={{ fontSize: 13, marginTop: 8 }}>
+              Waiting on {pendingSteps.map((s) => s.approver).join(', ')}.
+            </div>
+          )}
+        </>
+      )}
+
+      {mayApprove && ev.status === 'Pending' && myPending.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <button className="fab" style={{ flex: 1, justifyContent: 'center' }} onClick={() => act('Approved')}>
+            <i className="ti ti-check" /> {isOverride && myPending.some((s) => s.approver !== user.name) ? 'Approve (override)' : 'Approve'}
           </button>
           <button
             className="btn-soft"
             style={{ flex: 1, justifyContent: 'center', color: 'var(--bad)', borderColor: 'var(--bad)' }}
-            onClick={() => updateEvent(ev.id, { status: 'Declined', percent_approved: 0 })}
+            onClick={() => act('Declined')}
           >
             <i className="ti ti-x" /> Decline
           </button>
         </div>
       )}
-      {canApprove && ev.status !== 'Pending' && (
+      {mayApprove && ev.status !== 'Pending' && (
         <button
           className="btn-soft"
           style={{ marginTop: 24 }}
-          onClick={() => updateEvent(ev.id, { status: 'Pending', percent_approved: 0 })}
+          onClick={() => updateEvent(ev.id, { status: 'Pending', percent_approved: 0, approvals: [] })}
         >
           <i className="ti ti-rotate" /> Reset to pending
         </button>
