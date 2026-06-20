@@ -150,6 +150,14 @@ export default function WorkDetail() {
         )}
       </div>
 
+      {w.photo && (
+        <img
+          src={w.photo}
+          alt="Reported by requester"
+          style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '0.5px solid var(--border-2)', marginTop: 16, display: 'block' }}
+        />
+      )}
+
       {w.setupStyle && (
         <div className="list" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 14, marginTop: 16 }}>
           <span style={{ width: 100, flexShrink: 0, background: 'var(--surface-2)', borderRadius: 9, padding: 8 }}>

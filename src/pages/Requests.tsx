@@ -5,6 +5,8 @@ import { allRooms, roomFolders } from '../data/inventory';
 import { teamSeasons } from '../data/teams';
 import { sportOf, sportVenues, athleticFacilities } from '../data/athletic-venues';
 import { useSession } from '../lib/session';
+import { useStore } from '../lib/store';
+import type { Department } from '../lib/types';
 
 type Field =
   | { kind: 'text'; label: string; placeholder?: string }
@@ -440,6 +442,160 @@ function AthleticsForm() {
   );
 }
 
+function readPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// A live request form for the Maintenance and IT doors. Deliberately tiny for
+// the requester — category, where, what's wrong, an optional photo — and on
+// submit it becomes a WorkItem that drops straight into the department queue.
+// Industry pattern (Brightly Asset Essentials, Incident IQ): the requester
+// never sets priority or assignee; the department triages that side.
+function DeptForm({ door }: { door: Door }) {
+  const nav = useNavigate();
+  const { addWorkItem } = useStore();
+  const { user } = useSession();
+  const isIT = door.id === 'it';
+  const dept: Department = isIT ? 'IT' : 'Maintenance';
+
+  const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
+  const [area, setArea] = useState('');
+  const [room, setRoom] = useState('');
+  const [problem, setProblem] = useState('');
+  const [emergency, setEmergency] = useState(false);
+  const [details, setDetails] = useState('');
+  const [photo, setPhoto] = useState<string>('');
+
+  const catOpts = isIT
+    ? ['Hardware', 'Software / login', 'Network / Wi-Fi', 'AV / projector', 'Other']
+    : ['Plumbing', 'Electrical', 'HVAC', 'Furniture / setup', 'Grounds', 'General'];
+
+  const type = isIT ? problem : category;
+  const where = isIT ? [location, area, room].filter(Boolean).join(' · ') : [location, room].filter(Boolean).join(' · ');
+  const ready = !!type && !!details.trim();
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) setPhoto(await readPhoto(f));
+  }
+
+  function submit() {
+    if (!ready) return;
+    const item = addWorkItem({
+      department: dept,
+      type,
+      title: `${type}${where ? ' — ' + (isIT ? location : location || room) : ''}`,
+      requestedBy: user.name,
+      createdAt: new Date().toISOString(),
+      status: 'New',
+      // Emergencies jump the queue; everything else triaged by the department.
+      priority: emergency ? 'Urgent' : 'Normal',
+      location: where || undefined,
+      details: details.trim(),
+      photo: photo || undefined,
+    });
+    nav('/work/' + item.id);
+  }
+
+  return (
+    <>
+      <Labeled label={isIT ? 'Problem type' : 'Work category'}>
+        <div style={{ position: 'relative' }}>
+          <select value={isIT ? problem : category} onChange={(e) => (isIT ? setProblem(e.target.value) : setCategory(e.target.value))} style={{ ...inputStyle, appearance: 'none' }}>
+            <option value="">Select…</option>
+            {catOpts.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+          {chevron}
+        </div>
+      </Labeled>
+
+      <Labeled label="Location">
+        <div style={{ position: 'relative' }}>
+          <select value={location} onChange={(e) => setLocation(e.target.value)} style={{ ...inputStyle, appearance: 'none' }}>
+            <option value="">Select…</option>
+            {(isIT ? ['Elementary School', 'Middle School', 'High School'] : allRooms).map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+          {chevron}
+        </div>
+      </Labeled>
+
+      {isIT && (
+        <Labeled label="Area">
+          <div style={{ position: 'relative' }}>
+            <select value={area} onChange={(e) => setArea(e.target.value)} style={{ ...inputStyle, appearance: 'none' }}>
+              <option value="">Select…</option>
+              {['Auditorium', 'Classroom', 'Computer Lab', 'Conference Room', 'Data Closet', 'Library', 'Office'].map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </select>
+            {chevron}
+          </div>
+        </Labeled>
+      )}
+
+      <Labeled label={isIT ? 'Room number' : 'Area / room number'}>
+        <input type="text" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="e.g. 204" style={inputStyle} />
+      </Labeled>
+
+      <Labeled label={isIT ? 'Describe the problem' : 'Work requested'}>
+        <textarea value={details} onChange={(e) => setDetails(e.target.value)} placeholder={isIT ? 'What’s happening?' : 'Describe the issue'} rows={3} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical' }} />
+      </Labeled>
+
+      {isIT ? (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)', marginBottom: 14 }}>
+          <input type="checkbox" checked={emergency} onChange={(e) => setEmergency(e.target.checked)} style={{ width: 18, height: 18 }} /> This is an emergency
+        </label>
+      ) : (
+        <Labeled label="Photo of the problem (optional)">
+          <PhotoField photo={photo} onFile={onFile} onClear={() => setPhoto('')} />
+        </Labeled>
+      )}
+      {isIT && (
+        <Labeled label="Photo (optional)">
+          <PhotoField photo={photo} onFile={onFile} onClear={() => setPhoto('')} />
+        </Labeled>
+      )}
+
+      <button
+        onClick={submit}
+        disabled={!ready}
+        style={{ ...inputStyle, height: 44, background: 'var(--green)', color: '#fff', border: 'none', fontSize: 15, fontWeight: 500, opacity: ready ? 1 : 0.5, marginBottom: 14, cursor: ready ? 'pointer' : 'default' }}
+      >
+        Submit to {dept}
+      </button>
+    </>
+  );
+}
+
+function PhotoField({ photo, onFile, onClear }: { photo: string; onFile: (e: React.ChangeEvent<HTMLInputElement>) => void; onClear: () => void }) {
+  if (photo) {
+    return (
+      <div style={{ position: 'relative', width: 120 }}>
+        <img src={photo} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '0.5px solid var(--border-2)' }} />
+        <button onClick={onClear} style={{ position: 'absolute', top: -8, right: -8, width: 24, height: 24, borderRadius: 999, background: 'var(--bad)', color: '#fff', border: 'none', fontSize: 13, cursor: 'pointer' }}>
+          <i className="ti ti-x" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <label style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', cursor: 'pointer' }}>
+      <i className="ti ti-camera" /> Add photo
+      <input type="file" accept="image/*" capture="environment" onChange={onFile} style={{ display: 'none' }} />
+    </label>
+  );
+}
+
 export default function Requests() {
   const [params, setParams] = useSearchParams();
   const nav = useNavigate();
@@ -467,24 +623,43 @@ export default function Requests() {
 
         <div className="banner" style={{ background: 'var(--green-tint)', borderColor: 'transparent', color: 'var(--text-2)', marginTop: 14 }}>
           <i className="ti ti-info-circle" style={{ color: 'var(--green)' }} />
-          <span>
-            Preview of the request form. Submitting as <b style={{ color: 'var(--text-1)' }}>{user.name}</b> — routes to{' '}
-            {active.routesTo ?? 'the approvers'} through the same approve → assign → notify engine as a room booking.
-          </span>
+          {active.id === 'maintenance' || active.id === 'it' ? (
+            <span>
+              Submitting as <b style={{ color: 'var(--text-1)' }}>{user.name}</b> — this drops straight into the{' '}
+              {active.id === 'it' ? 'IT' : 'Maintenance'} queue, where the team triages, assigns, and tracks it to done.
+            </span>
+          ) : (
+            <span>
+              Preview of the request form. Submitting as <b style={{ color: 'var(--text-1)' }}>{user.name}</b> — routes to{' '}
+              {active.routesTo ?? 'the approvers'} through the same approve → assign → notify engine as a room booking.
+            </span>
+          )}
         </div>
 
         <div className="list" style={{ padding: '18px 18px 6px' }}>
           {active.id === 'athletics' ? (
-            <AthleticsForm />
+            <>
+              <AthleticsForm />
+              <button
+                disabled
+                style={{ ...inputStyle, height: 44, background: 'var(--green)', color: '#fff', border: 'none', fontSize: 15, fontWeight: 500, opacity: 0.85, marginBottom: 14 }}
+              >
+                Submit request
+              </button>
+            </>
+          ) : active.id === 'maintenance' || active.id === 'it' ? (
+            <DeptForm door={active} />
           ) : (
-            active.fields.map((f) => <FieldView key={f.label} f={f} />)
+            <>
+              {active.fields.map((f) => <FieldView key={f.label} f={f} />)}
+              <button
+                disabled
+                style={{ ...inputStyle, height: 44, background: 'var(--green)', color: '#fff', border: 'none', fontSize: 15, fontWeight: 500, opacity: 0.85, marginBottom: 14 }}
+              >
+                Submit request
+              </button>
+            </>
           )}
-          <button
-            disabled
-            style={{ ...inputStyle, height: 44, background: 'var(--green)', color: '#fff', border: 'none', fontSize: 15, fontWeight: 500, opacity: 0.85, marginBottom: 14 }}
-          >
-            Submit request
-          </button>
         </div>
         <div style={{ height: 16 }} />
       </>
