@@ -44,7 +44,7 @@ export const roomFolders: Folder[] = [
       'Tortoise Habitat',
     ],
   },
-  { name: 'Athletics', items: ['Gutierrez Field', 'Gym', 'SAC', 'Pool', 'Main Football Field', 'Track'] },
+  { name: 'Athletics', items: ['Main Football Field', 'Warrior Field', 'Gutierrez Field', 'Baseball Field', 'Gym', 'SAC', 'Pool', 'Track'] },
   { name: 'Elementary School', items: ['ES Courtyard/Field', 'ES Classrooms', 'Food Truck Pavilion', 'ES Gym'] },
   {
     name: 'Media Center',

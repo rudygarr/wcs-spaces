@@ -8,7 +8,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
