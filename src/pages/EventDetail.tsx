@@ -71,13 +71,13 @@ export default function EventDetail() {
           </span>
         )}
         {conflicted && (
-          <span className="pill" style={{ background: 'color-mix(in srgb, var(--bad) 14%, transparent)', color: 'var(--bad)' }}>
-            Double-booked
+          <span className="pill" style={{ background: 'color-mix(in srgb, var(--warn) 16%, transparent)', color: 'var(--warn)' }}>
+            <i className="ti ti-alert-triangle" /> Double-booked
           </span>
         )}
       </div>
 
-      <h1 className="page-h" style={{ marginTop: 10 }}>
+      <h1 className="page-h" style={{ marginTop: 10, color: conflicted ? 'var(--warn)' : undefined }}>
         {ev.name}
       </h1>
 

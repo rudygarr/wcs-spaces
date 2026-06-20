@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { canDelegate, deptTeam, assignedToMe } from '../lib/fulfill';
+import { legCollision, driverBusyElsewhere } from '../lib/conflicts';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import { statusTint, priorityColor } from './Queue';
 import type { Priority, TripLeg, WorkItem, WorkStatus } from '../lib/types';
@@ -140,17 +141,6 @@ export default function WorkDetail() {
         other.trip?.legs.some((l) => l.bus === bus),
     ) || (w.trip?.legs.some((l) => l.id !== legId && l.bus === bus) ?? false);
 
-  // A double-booking is something to flag, not forbid (the shuttle exception):
-  // these name the *other* trip a driver/bus already serves on the same day.
-  // A driver on multiple legs of THIS trip is intentional, so not flagged.
-  const driverBookedElsewhere = (driver: string): string | null =>
-    db.workItems.find(
-      (o) => o.id !== w.id && o.scheduledFor && o.scheduledFor === w.scheduledFor && o.trip?.legs.some((l) => l.driver === driver),
-    )?.title ?? null;
-  const busBookedElsewhere = (bus: string): string | null =>
-    db.workItems.find(
-      (o) => o.id !== w.id && o.scheduledFor && o.scheduledFor === w.scheduledFor && o.trip?.legs.some((l) => l.bus === bus),
-    )?.title ?? null;
 
   function setStatus(s: WorkStatus) {
     updateWorkItem(w!.id, { status: s });
@@ -315,11 +305,12 @@ export default function WorkDetail() {
             <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value })} />
           </Field>
           {w.trip!.legs.map((leg) => {
-            const dConflict = leg.driver ? driverBookedElsewhere(leg.driver) : null;
-            const bConflict = leg.bus ? busBookedElsewhere(leg.bus) : null;
-            const hasConflict = !!(dConflict || bConflict);
+            const col = legCollision(db, w, leg);
+            const dConflict = col.driverTrip;
+            const bConflict = col.busTrip;
+            const hasConflict = col.has;
             return (
-            <div key={leg.id} className="leg" style={hasConflict && !leg.conflictOk ? { borderColor: 'var(--warn)' } : undefined}>
+            <div key={leg.id} className="leg" style={hasConflict && !col.resolved ? { borderColor: 'var(--warn)' } : undefined}>
               <div className="leg-head">
                 <i className={'ti ' + (leg.kind === 'Outbound' ? 'ti-arrow-right' : 'ti-arrow-back-up')} />
                 {leg.kind} {w.trip!.destination ? (leg.kind === 'Outbound' ? '→ ' + w.trip!.destination : '→ WCS') : ''}
@@ -343,7 +334,7 @@ export default function WorkDetail() {
                     {drivers.map((d) => (
                       <option key={d.id} value={d.name}>
                         {d.name}
-                        {leg.driver !== d.name && driverBookedElsewhere(d.name) ? '  — driving elsewhere' : ''}
+                        {leg.driver !== d.name && driverBusyElsewhere(db, w, d.name) ? '  — driving elsewhere' : ''}
                       </option>
                     ))}
                     <option value="__add">+ Add a driver…</option>
@@ -364,12 +355,12 @@ export default function WorkDetail() {
               </div>
 
               {hasConflict &&
-                (leg.conflictOk ? (
+                (col.resolved ? (
                   <div className="conflict-ok">
                     <span>
                       <i className="ti ti-circle-check" /> Double-booking accepted — dispatch will shuttle.
                     </span>
-                    <button onClick={() => updateLeg(leg.id, { conflictOk: false })}>Undo</button>
+                    {leg.conflictOk && <button onClick={() => updateLeg(leg.id, { conflictOk: false })}>Undo</button>}
                   </div>
                 ) : (
                   <div className="conflict-warn">

@@ -131,10 +131,13 @@ export default function Calendar() {
                 </span>
                 <span
                   className="dot"
-                  style={{ background: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status) }}
+                  style={{ background: conflicted ? 'var(--warn)' : notice ? 'var(--info)' : statusColor(e.status) }}
                 />
                 <span className="body">
-                  <span className="title">{e.name}</span>
+                  <span className="title" style={conflicted ? { color: 'var(--warn)' } : undefined}>
+                    {conflicted && <i className="ti ti-alert-triangle" style={{ fontSize: 14, marginRight: 4 }} />}
+                    {e.name}
+                  </span>
                   <span className="sub">
                     {notice
                       ? e.location || (e.audience ? e.audience : 'No space booked')
@@ -157,11 +160,11 @@ export default function Calendar() {
                   className="pill"
                   style={{
                     background: conflicted
-                      ? 'color-mix(in srgb, var(--bad) 14%, transparent)'
+                      ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
                       : notice
                         ? 'color-mix(in srgb, var(--info) 14%, transparent)'
                         : 'var(--surface-2)',
-                    color: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status),
+                    color: conflicted ? 'var(--warn)' : notice ? 'var(--info)' : statusColor(e.status),
                   }}
                 >
                   {conflicted ? 'Conflict' : notice ? 'FYI' : e.status}

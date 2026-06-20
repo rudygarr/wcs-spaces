@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { assignedToMe, canDelegate } from '../lib/fulfill';
+import { tripHasActiveConflict } from '../lib/conflicts';
 import type { Department, Priority, WorkItem, WorkStatus } from '../lib/types';
 
 const DEPTS: { id: Department; icon: string; cls: string }[] = [
@@ -130,16 +131,21 @@ export default function Queue() {
 }
 
 function WorkRow({ w, onOpen }: { w: WorkItem; onOpen: () => void }) {
+  const { db } = useStore();
   const dept = DEPTS.find((d) => d.id === w.department);
+  const conflict = tripHasActiveConflict(db, w);
   return (
     <button className="row" onClick={onOpen} style={{ alignItems: 'flex-start' }}>
       <span className={'tile-icon ' + (dept?.cls ?? '')} style={{ width: 34, height: 34, borderRadius: 10, fontSize: 17, flexShrink: 0, marginTop: 2 }}>
         <i className={'ti ' + (dept?.icon ?? 'ti-dots')} />
       </span>
       <span className="body">
-        <span className="title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {w.priority !== 'Normal' && w.priority !== 'Low' && (
-            <span className="dot" style={{ background: priorityColor(w.priority), width: 7, height: 7 }} />
+        <span className="title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: conflict ? 'var(--warn)' : undefined }}>
+          {conflict ? (
+            <i className="ti ti-alert-triangle" style={{ color: 'var(--warn)', fontSize: 15 }} />
+          ) : (
+            w.priority !== 'Normal' &&
+            w.priority !== 'Low' && <span className="dot" style={{ background: priorityColor(w.priority), width: 7, height: 7 }} />
           )}
           {w.title}
         </span>

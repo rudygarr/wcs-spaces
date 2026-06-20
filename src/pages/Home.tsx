@@ -4,6 +4,7 @@ import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusCol
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { assignedToMe } from '../lib/fulfill';
+import { allConflicts, CONFLICT_ICON } from '../lib/conflicts';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -29,6 +30,7 @@ export default function Home() {
   const mine = today.filter((e) => isMine(e, user.name));
   const shown = view === 'mine' ? mine : today;
   const conflicts = findConflicts(today);
+  const liveConflicts = allConflicts(db);
   const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
   const openWork = (dept: string) => db.workItems.filter((w) => w.department === dept && w.status !== 'Done').length;
   const myTasks = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
@@ -51,6 +53,32 @@ export default function Home() {
           {today.length} events today · {pendingCount} approvals waiting
         </div>
       </div>
+
+      {liveConflicts.length > 0 && (
+        <div className="conflict-card" style={{ marginBottom: 26 }}>
+          <div className="cc-head">
+            <i className={'ti ' + CONFLICT_ICON} />
+            <span>
+              {liveConflicts.length} scheduling conflict{liveConflicts.length === 1 ? '' : 's'} need a look
+            </span>
+          </div>
+          {liveConflicts.slice(0, 4).map((c) => (
+            <button key={c.id} className="cc-row" onClick={() => nav(c.link)}>
+              <span className="cc-kind">{c.kind === 'trip' ? 'Trip' : 'Room'}</span>
+              <span className="cc-body">
+                <span className="cc-title">{c.title}</span>
+                <span className="cc-detail">{c.detail}</span>
+              </span>
+              <i className="ti ti-chevron-right chev" />
+            </button>
+          ))}
+          {liveConflicts.length > 4 && (
+            <button className="cc-more" onClick={() => nav('/calendar')}>
+              +{liveConflicts.length - 4} more
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="tiles" style={{ marginBottom: 30 }}>
         {tiles.map((t) => (
@@ -96,11 +124,14 @@ export default function Home() {
                 <span className="time tnum">{e.all_day ? 'All day' : fmtTime(e.starts_at)}</span>
                 <span
                   className="dot"
-                  style={{ background: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status) }}
+                  style={{ background: conflicted ? 'var(--warn)' : notice ? 'var(--info)' : statusColor(e.status) }}
                 />
                 <span className="body">
-                  <span className="title">{e.name}</span>
-                  <span className="sub" style={conflicted ? { color: 'var(--bad)' } : undefined}>
+                  <span className="title" style={conflicted ? { color: 'var(--warn)' } : undefined}>
+                    {conflicted && <i className={'ti ' + CONFLICT_ICON} style={{ fontSize: 14, marginRight: 4 }} />}
+                    {e.name}
+                  </span>
+                  <span className="sub" style={conflicted ? { color: 'var(--warn)' } : undefined}>
                     {conflicted
                       ? `${e.rooms[0]} · double-booked`
                       : notice

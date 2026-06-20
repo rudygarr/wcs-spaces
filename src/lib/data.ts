@@ -98,11 +98,18 @@ export interface Conflict {
 }
 
 // Two events conflict if they share a room and their time ranges overlap.
+// We skip noise that isn't a real double-booking: parenthetical annotations
+// like "(Music bleed into Beacon Hall…)", and the same event showing up twice
+// across the internal + public calendar feeds (identical name & start).
 export function findConflicts(list: EventRec[]): Conflict[] {
   const out: Conflict[] = [];
   const byRoom = new Map<string, EventRec[]>();
   for (const e of list) {
     if (e.all_day || e.status === 'Declined') continue;
+    if (e.name.trim().startsWith('(')) continue;
+    // The public master-calendar feed mirrors booked events (often with slightly
+    // different names) — it's read-only awareness, not a source of real clashes.
+    if (e.source === 'public') continue;
     for (const r of e.rooms) {
       if (!byRoom.has(r)) byRoom.set(r, []);
       byRoom.get(r)!.push(e);
@@ -114,8 +121,10 @@ export function findConflicts(list: EventRec[]): Conflict[] {
       for (let j = i + 1; j < evs.length; j++) {
         const aEnd = new Date(evs[i].ends_at || evs[i].starts_at!).getTime();
         const bStart = new Date(evs[j].starts_at!).getTime();
-        if (bStart < aEnd) out.push({ room, a: evs[i], b: evs[j] });
-        else break;
+        if (bStart >= aEnd) break;
+        // Same booking duplicated across feeds — not a real clash.
+        if (evs[i].name === evs[j].name && evs[i].starts_at === evs[j].starts_at) continue;
+        out.push({ room, a: evs[i], b: evs[j] });
       }
     }
   }
