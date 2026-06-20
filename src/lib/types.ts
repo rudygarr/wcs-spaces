@@ -81,4 +81,7 @@ export interface Database {
   resources: Resource[];
   people: PersonRec[];
   events: EventRec[];
+  // Bumped whenever the seed data changes. A saved DB with an older version is
+  // discarded on load so returning visitors pick up new demo data automatically.
+  seedVersion?: number;
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Database, Room, Resource, PersonRec, EventRec } from './types';
-import { buildSeed } from './seed';
+import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 
 function uid(prefix: string): string {
@@ -25,7 +25,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<Database | null>(null);
 
   useEffect(() => {
-    loadDB().then((saved) => setDb(saved ?? buildSeed()));
+    loadDB().then((saved) => {
+      // Discard a saved DB from an older seed so new demo data shows up.
+      const fresh = !saved || saved.seedVersion !== SEED_VERSION;
+      if (fresh) {
+        const seed = buildSeed();
+        setDb(seed);
+        void saveDB(seed);
+      } else {
+        setDb(saved);
+      }
+    });
   }, []);
 
   function commit(next: Database) {
