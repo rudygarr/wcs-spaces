@@ -1043,3 +1043,90 @@
 @media (max-width: 380px) {
   .setup-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---- Work queues ---- */
+.qfilter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.qchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 0.5px solid var(--border-2);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.qchip.on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.qchip .qcount {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+.qchip.on .qcount {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* ---- Status pipeline ---- */
+.statusbar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.statusstep {
+  flex: 1;
+  white-space: nowrap;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  border: 0.5px solid var(--border-2);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.statusstep.on {
+  background: var(--green-tint);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 500;
+}
+
+/* ---- Trip legs ---- */
+.leg {
+  border: 0.5px solid var(--border-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.leg-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+.leg-head i {
+  color: var(--text-3);
+}

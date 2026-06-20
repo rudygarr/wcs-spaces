@@ -29,6 +29,12 @@ export default function Home() {
   const shown = view === 'mine' ? mine : today;
   const conflicts = findConflicts(today);
   const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
+  const openWork = (dept: string) => db.workItems.filter((w) => w.department === dept && w.status !== 'Done').length;
+  const deptQueues = [
+    { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
+    { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
+    { id: 'Transportation', icon: 'ti-bus', cls: 't-ath' },
+  ];
   const firstName = user.name.split(' ')[0];
   const needs = pendingCount + conflicts.length;
 
@@ -105,6 +111,30 @@ export default function Home() {
             </div>
           );
         })}
+      </div>
+
+      <div className="section-label">
+        <span className="lbl">Work queues</span>
+        <span className="act" onClick={() => nav('/queue')} style={{ cursor: 'pointer' }}>
+          Open
+        </span>
+      </div>
+      <div className="list" style={{ marginBottom: 24 }}>
+        {deptQueues.map((d, i) => (
+          <div key={d.id}>
+            {i > 0 && <div className="divider" style={{ marginLeft: 16 }} />}
+            <button className="row" onClick={() => nav('/queue?dept=' + d.id)}>
+              <span className={'tile-icon ' + d.cls} style={{ width: 34, height: 34, borderRadius: 10, fontSize: 17, flexShrink: 0 }}>
+                <i className={'ti ' + d.icon} />
+              </span>
+              <span className="body">
+                <span className="title">{d.id}</span>
+                <span className="sub">{openWork(d.id)} open request{openWork(d.id) === 1 ? '' : 's'}</span>
+              </span>
+              <i className="ti ti-chevron-right chev" />
+            </button>
+          </div>
+        ))}
       </div>
 
       <div className="widgets" style={{ marginBottom: 24 }}>

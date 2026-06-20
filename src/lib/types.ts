@@ -78,11 +78,75 @@ export interface EventRec extends WcsEvent {
   id: string;
 }
 
+// ---- Fulfillment: department queues & dispatch ----
+// Every request, once it leaves the form, becomes a WorkItem — one uniform
+// object (type + details + assignment + status) that lands in a department's
+// queue. Transportation is the rich case: it carries a multi-leg Trip.
+export type WorkStatus = 'New' | 'Assigned' | 'Scheduled' | 'In progress' | 'Done';
+export type Department = 'Maintenance' | 'IT' | 'Transportation';
+export type Priority = 'Low' | 'Normal' | 'High' | 'Urgent';
+
+export interface TripLeg {
+  id: string;
+  kind: 'Outbound' | 'Return';
+  time?: string; // HH:MM
+  bus?: string; // bus resource name
+  driver?: string; // driver name
+}
+
+export interface Trip {
+  destination?: string;
+  legs: TripLeg[];
+}
+
+export interface WorkItem {
+  id: string;
+  department: Department;
+  type: string;
+  title: string;
+  requestedBy: string;
+  createdAt: string;
+  status: WorkStatus;
+  priority: Priority;
+  location?: string;
+  details?: string;
+  assignee?: string;
+  scheduledFor?: string; // ISO date (day)
+  photo?: string; // base64 data url
+  setupStyle?: string;
+  eventId?: string;
+  trip?: Trip;
+}
+
+export interface Driver {
+  id: string;
+  name: string;
+  phone?: string;
+  photo?: string; // base64 data url
+  active?: boolean;
+}
+
+// A saved request template — prefills a request door so common events are one tap.
+export interface Template {
+  id: string;
+  door: string; // 'book' | 'athletics' | ...
+  name: string;
+  rooms?: string[];
+  resources?: string[];
+  setupStyle?: string;
+  needs?: string[];
+  details?: string;
+  builtIn?: boolean; // seeded templates can't be deleted
+}
+
 export interface Database {
   rooms: Room[];
   resources: Resource[];
   people: PersonRec[];
   events: EventRec[];
+  workItems: WorkItem[];
+  drivers: Driver[];
+  templates: Template[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

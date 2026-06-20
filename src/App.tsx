@@ -12,6 +12,8 @@ import EventDetail from './pages/EventDetail';
 import People from './pages/People';
 import PersonDetail from './pages/PersonDetail';
 import AthleticsWeek from './pages/AthleticsWeek';
+import Queue from './pages/Queue';
+import WorkDetail from './pages/WorkDetail';
 import './App.css';
 
 export default function App() {
@@ -28,6 +30,8 @@ export default function App() {
               <Route path="/person/:id" element={<PersonDetail />} />
               <Route path="/athletics" element={<AthleticsWeek />} />
               <Route path="/requests" element={<Requests />} />
+              <Route path="/queue" element={<Queue />} />
+              <Route path="/work/:id" element={<WorkDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />
               <Route path="/event/:id" element={<EventDetail />} />

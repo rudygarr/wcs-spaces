@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 
@@ -16,6 +16,12 @@ interface StoreCtx {
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
   updateEvent: (id: string, patch: Partial<EventRec>) => void;
   reassignOwner: (fromName: string, toName: string) => void;
+  addWorkItem: (w: Omit<WorkItem, 'id'>) => WorkItem;
+  updateWorkItem: (id: string, patch: Partial<WorkItem>) => void;
+  addDriver: (d: Omit<Driver, 'id'>) => Driver;
+  updateDriver: (id: string, patch: Partial<Driver>) => void;
+  addTemplate: (t: Omit<Template, 'id'>) => Template;
+  removeTemplate: (id: string) => void;
   reset: () => void;
 }
 
@@ -82,6 +88,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...db,
         events: db.events.map((e) => (e.owner === fromName ? { ...e, owner: toName } : e)),
       });
+    },
+    addWorkItem(w) {
+      const item: WorkItem = { ...w, id: uid('w') };
+      commit({ ...db, workItems: [...db.workItems, item] });
+      return item;
+    },
+    updateWorkItem(id, patch) {
+      commit({ ...db, workItems: db.workItems.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
+    },
+    addDriver(d) {
+      const driver: Driver = { ...d, id: uid('drv'), active: true };
+      commit({ ...db, drivers: [...db.drivers, driver] });
+      return driver;
+    },
+    updateDriver(id, patch) {
+      commit({ ...db, drivers: db.drivers.map((d) => (d.id === id ? { ...d, ...patch } : d)) });
+    },
+    addTemplate(t) {
+      const tpl: Template = { ...t, id: uid('tpl') };
+      commit({ ...db, templates: [...db.templates, tpl] });
+      return tpl;
+    },
+    removeTemplate(id) {
+      commit({ ...db, templates: db.templates.filter((t) => t.id !== id) });
     },
     reset() {
       void clearDB();

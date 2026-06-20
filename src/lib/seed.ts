@@ -3,12 +3,13 @@ import rawPeople from '../data/people.json';
 import rawPublic from '../data/public-events.json';
 import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
+import { seedDrivers, seedWorkItems, seedTemplates } from '../data/fulfillment';
 import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
@@ -28,7 +29,16 @@ export function buildSeed(): Database {
   const publicEvents: EventRec[] = (rawPublic as WcsEvent[]).map((e, i) => ({ ...e, id: `pub-${i}` }));
   // Athletics calendar — separate iCal feed (games, tournaments, dept events).
   const athletic: EventRec[] = (rawAthletic as WcsEvent[]).map((e, i) => ({ ...e, id: `ath-${i}` }));
-  return { rooms, resources, people, events: [...internal, ...publicEvents, ...athletic, ...notices], seedVersion: SEED_VERSION };
+  return {
+    rooms,
+    resources,
+    people,
+    events: [...internal, ...publicEvents, ...athletic, ...notices],
+    workItems: seedWorkItems,
+    drivers: seedDrivers,
+    templates: seedTemplates,
+    seedVersion: SEED_VERSION,
+  };
 }
 
 // Hand-authored examples of the "notice" model: events that reserve no campus
