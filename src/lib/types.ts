@@ -146,6 +146,19 @@ export interface Template {
   builtIn?: boolean; // seeded templates can't be deleted
 }
 
+// An in-app notification, addressed to a person by name. In production these
+// fan out to email / Teams via the backend; in the demo they ring the bell.
+export interface Notif {
+  id: string;
+  to: string; // person name this is for
+  kind: 'assigned' | 'crew' | 'done';
+  title: string;
+  body?: string;
+  link?: string; // hash route to open when tapped
+  createdAt: string;
+  read?: boolean;
+}
+
 export interface Database {
   rooms: Room[];
   resources: Resource[];
@@ -154,6 +167,7 @@ export interface Database {
   workItems: WorkItem[];
   drivers: Driver[];
   templates: Template[];
+  notifications: Notif[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

@@ -101,7 +101,7 @@ function ReadOnlyTrip({ w }: { w: WorkItem }) {
 export default function WorkDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateWorkItem, addDriver } = useStore();
+  const { db, updateWorkItem, addDriver, notify } = useStore();
   const { user } = useSession();
   const w = db.workItems.find((x) => x.id === id);
   const [addingDriver, setAddingDriver] = useState(false);
@@ -142,11 +142,25 @@ export default function WorkDetail() {
 
   function setStatus(s: WorkStatus) {
     updateWorkItem(w!.id, { status: s });
+    // Close the loop: tell the requester when their request is done.
+    if (s === 'Done' && w!.requestedBy && w!.requestedBy !== user.name) {
+      notify({ to: w!.requestedBy, kind: 'done', title: `Completed: ${w!.title}`, body: w!.location ?? undefined, link: `#/work/${w!.id}` });
+    }
+  }
+  function delegateTo(v: string) {
+    updateWorkItem(w!.id, { assignee: v, status: w!.status === 'New' && v ? 'Assigned' : w!.status });
+    if (v && v !== w!.assignee && v !== user.name) {
+      notify({ to: v, kind: 'assigned', title: `New task: ${w!.title}`, body: w!.location ?? undefined, link: `#/work/${w!.id}` });
+    }
   }
   function updateLeg(legId: string, patch: Partial<TripLeg>) {
     if (!w!.trip) return;
     const legs = w!.trip.legs.map((l) => (l.id === legId ? { ...l, ...patch } : l));
     updateWorkItem(w!.id, { trip: { ...w!.trip, legs } });
+    const prev = w!.trip.legs.find((l) => l.id === legId)?.driver;
+    if (patch.driver && patch.driver !== prev && patch.driver !== user.name) {
+      notify({ to: patch.driver, kind: 'assigned', title: `You're driving: ${w!.title}`, body: w!.trip.destination ?? undefined, link: `#/work/${w!.id}` });
+    }
   }
   function saveDriver() {
     const name = newDriver.trim();
@@ -364,10 +378,10 @@ export default function WorkDetail() {
           </div>
           {mayDelegate ? (
             <Field label="Delegate to">
-              <Sel value={w.assignee ?? ''} onChange={(v) => updateWorkItem(w.id, { assignee: v, status: w.status === 'New' && v ? 'Assigned' : w.status })}>
+              <Sel value={w.assignee ?? ''} onChange={delegateTo}>
                 <option value="">Unassigned…</option>
                 {team.map((p) => (
-                  <option key={p.id}>
+                  <option key={p.id} value={p.name}>
                     {p.name}
                     {p.deptRole ? ` · ${p.deptRole}` : ''}
                   </option>

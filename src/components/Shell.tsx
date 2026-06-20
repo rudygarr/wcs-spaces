@@ -77,6 +77,83 @@ function RoleSwitcher() {
   );
 }
 
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  return `${d}d ago`;
+}
+
+const NOTIF_ICON: Record<string, string> = {
+  assigned: 'ti-clipboard-check',
+  crew: 'ti-users-group',
+  done: 'ti-circle-check',
+};
+
+function NotifBell() {
+  const nav = useNavigate();
+  const { user } = useSession();
+  const { db, markNotifsReadFor } = useStore();
+  const [open, setOpen] = useState(false);
+
+  const mine = db.notifications
+    .filter((n) => n.to === user.name)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const unread = mine.filter((n) => !n.read).length;
+
+  function openPanel() {
+    setOpen(true);
+  }
+  function close() {
+    setOpen(false);
+    // Mark read once they've had a look.
+    markNotifsReadFor(user.name);
+  }
+
+  return (
+    <>
+      <button className="bell" onClick={openPanel} aria-label="Notifications">
+        <i className="ti ti-bell" />
+        {unread > 0 && <span className="bell-badge">{unread}</span>}
+      </button>
+      {open && (
+        <div className="switch-backdrop" onClick={close}>
+          <div className="switch-panel notif-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="switch-head">
+              Notifications for {user.name.split(' ')[0]} — in production these also go to email & Teams.
+            </div>
+            {mine.length === 0 && <div className="empty" style={{ margin: 12 }}>You're all caught up.</div>}
+            {mine.map((n) => (
+              <button
+                key={n.id}
+                className={'notif-row' + (n.read ? '' : ' unread')}
+                onClick={() => {
+                  if (n.link) nav(n.link.replace(/^#/, ''));
+                  close();
+                }}
+              >
+                <span className="notif-ic">
+                  <i className={'ti ' + (NOTIF_ICON[n.kind] ?? 'ti-bell')} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="notif-title">{n.title}</span>
+                  {n.body && <span className="notif-body">{n.body}</span>}
+                  <span className="notif-time">{timeAgo(n.createdAt)}</span>
+                </span>
+                {!n.read && <span className="notif-dot" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 const tabs = [
   { to: '/', icon: 'ti-home', label: 'Home' },
   { to: '/calendar', icon: 'ti-calendar', label: 'Calendar' },
@@ -98,7 +175,10 @@ export default function Shell({ children }: { children: ReactNode }) {
             </span>
             <span className="brand-name">Spaces</span>
           </button>
-          <RoleSwitcher />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NotifBell />
+            <RoleSwitcher />
+          </div>
         </div>
       </div>
 

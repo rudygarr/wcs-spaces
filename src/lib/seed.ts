@@ -4,12 +4,45 @@ import rawPublic from '../data/public-events.json';
 import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
-import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
+import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 6;
+export const SEED_VERSION = 7;
+
+// Derive starter notifications from the seeded assignments, so each crew
+// member already has a ringing bell when you "view as" them.
+function seedNotifs(): Notif[] {
+  const out: Notif[] = [];
+  for (const w of seedWorkItems) {
+    if (w.assignee) {
+      out.push({
+        id: `n-${w.id}-a`,
+        to: w.assignee,
+        kind: 'assigned',
+        title: `New task: ${w.title}`,
+        body: w.location ?? undefined,
+        link: `#/work/${w.id}`,
+        createdAt: w.createdAt,
+      });
+    }
+    w.trip?.legs.forEach((l, i) => {
+      if (l.driver) {
+        out.push({
+          id: `n-${w.id}-l${i}`,
+          to: l.driver,
+          kind: 'assigned',
+          title: `You're driving: ${w.title}`,
+          body: w.trip?.destination ?? undefined,
+          link: `#/work/${w.id}`,
+          createdAt: w.createdAt,
+        });
+      }
+    });
+  }
+  return out;
+}
 
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
@@ -41,6 +74,7 @@ export function buildSeed(): Database {
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
+    notifications: seedNotifs(),
     seedVersion: SEED_VERSION,
   };
 }

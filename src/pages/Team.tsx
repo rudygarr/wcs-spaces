@@ -56,7 +56,7 @@ export default function Team() {
 }
 
 function DeptCrew({ dept, icon, cls }: { dept: Department; icon: string; cls: string }) {
-  const { db, updatePerson } = useStore();
+  const { db, updatePerson, notify } = useStore();
   const [q, setQ] = useState('');
   const crew = deptTeam(db.people, dept);
 
@@ -68,6 +68,7 @@ function DeptCrew({ dept, icon, cls }: { dept: Department; icon: string; cls: st
 
   function add(p: PersonRec) {
     updatePerson(p.id, { department: dept, deptRole: 'Tech' });
+    notify({ to: p.name, kind: 'crew', title: `You've been added to the ${dept} crew`, body: 'You can now be assigned work in this department.', link: `#/queue?dept=${dept}` });
     setQ('');
   }
   function setRole(p: PersonRec, role: 'Lead' | 'Tech') {

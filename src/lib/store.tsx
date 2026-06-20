@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 
@@ -22,6 +22,8 @@ interface StoreCtx {
   updateDriver: (id: string, patch: Partial<Driver>) => void;
   addTemplate: (t: Omit<Template, 'id'>) => Template;
   removeTemplate: (id: string) => void;
+  notify: (n: Omit<Notif, 'id' | 'createdAt' | 'read'>) => void;
+  markNotifsReadFor: (name: string) => void;
   reset: () => void;
 }
 
@@ -44,9 +46,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  function commit(next: Database) {
-    setDb(next);
-    void saveDB(next);
+  // Functional commit: each mutation receives the latest state, so two
+  // mutations fired in the same event handler (e.g. update an item *and* push
+  // a notification) compose instead of clobbering each other.
+  function commit(updater: (prev: Database) => Database) {
+    setDb((prev) => {
+      const next = updater(prev as Database);
+      void saveDB(next);
+      return next;
+    });
   }
 
   if (!db) {
@@ -59,59 +67,71 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     db,
     addRoom(name, folder) {
       const room: Room = { id: uid('r'), name: name.trim(), folder };
-      commit({ ...db, rooms: [...db.rooms, room] });
+      commit((d) => ({ ...d, rooms: [...d.rooms, room] }));
       return room;
     },
     addResource(name, folder) {
       const resource: Resource = { id: uid('res'), name: name.trim(), folder };
-      commit({ ...db, resources: [...db.resources, resource] });
+      commit((d) => ({ ...d, resources: [...d.resources, resource] }));
       return resource;
     },
     addPerson(p) {
       const person: PersonRec = { ...p, id: uid('p') };
-      commit({ ...db, people: [...db.people, person] });
+      commit((d) => ({ ...d, people: [...d.people, person] }));
       return person;
     },
     updatePerson(id, patch) {
-      commit({ ...db, people: db.people.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+      commit((d) => ({ ...d, people: d.people.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
     },
     addEvent(e) {
       const ev: EventRec = { ...e, id: uid('e') };
-      commit({ ...db, events: [...db.events, ev] });
+      commit((d) => ({ ...d, events: [...d.events, ev] }));
       return ev;
     },
     updateEvent(id, patch) {
-      commit({ ...db, events: db.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
+      commit((d) => ({ ...d, events: d.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
     },
     reassignOwner(fromName, toName) {
-      commit({
-        ...db,
-        events: db.events.map((e) => (e.owner === fromName ? { ...e, owner: toName } : e)),
-      });
+      commit((d) => ({
+        ...d,
+        events: d.events.map((e) => (e.owner === fromName ? { ...e, owner: toName } : e)),
+      }));
     },
     addWorkItem(w) {
       const item: WorkItem = { ...w, id: uid('w') };
-      commit({ ...db, workItems: [...db.workItems, item] });
+      commit((d) => ({ ...d, workItems: [...d.workItems, item] }));
       return item;
     },
     updateWorkItem(id, patch) {
-      commit({ ...db, workItems: db.workItems.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
+      commit((d) => ({ ...d, workItems: d.workItems.map((w) => (w.id === id ? { ...w, ...patch } : w)) }));
     },
-    addDriver(d) {
-      const driver: Driver = { ...d, id: uid('drv'), active: true };
-      commit({ ...db, drivers: [...db.drivers, driver] });
+    addDriver(dr) {
+      const driver: Driver = { ...dr, id: uid('drv'), active: true };
+      commit((d) => ({ ...d, drivers: [...d.drivers, driver] }));
       return driver;
     },
     updateDriver(id, patch) {
-      commit({ ...db, drivers: db.drivers.map((d) => (d.id === id ? { ...d, ...patch } : d)) });
+      commit((d) => ({ ...d, drivers: d.drivers.map((dr) => (dr.id === id ? { ...dr, ...patch } : dr)) }));
     },
     addTemplate(t) {
       const tpl: Template = { ...t, id: uid('tpl') };
-      commit({ ...db, templates: [...db.templates, tpl] });
+      commit((d) => ({ ...d, templates: [...d.templates, tpl] }));
       return tpl;
     },
     removeTemplate(id) {
-      commit({ ...db, templates: db.templates.filter((t) => t.id !== id) });
+      commit((d) => ({ ...d, templates: d.templates.filter((t) => t.id !== id) }));
+    },
+    notify(n) {
+      if (!n.to) return;
+      const notif: Notif = { ...n, id: uid('n'), createdAt: new Date().toISOString() };
+      commit((d) => ({ ...d, notifications: [...d.notifications, notif] }));
+    },
+    markNotifsReadFor(name) {
+      commit((d) =>
+        d.notifications.some((n) => n.to === name && !n.read)
+          ? { ...d, notifications: d.notifications.map((n) => (n.to === name ? { ...n, read: true } : n)) }
+          : d,
+      );
     },
     reset() {
       void clearDB();
