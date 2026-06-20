@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { allRooms, roomFolders } from '../data/inventory';
 import { teamSeasons } from '../data/teams';
@@ -198,7 +198,73 @@ const chevron = (
   <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-3)', pointerEvents: 'none' }} />
 );
 
-const ATH_NEEDS = ['AV / scoreboard', 'Athletic trainer', 'Game officials', 'Concessions', 'Security'];
+// Each athletics "need" is its own collapsible request, pre-opened by the
+// situation: at a HOME game you host (trainer, officials, AV, concessions,
+// security) so those open and transportation stays closed; AWAY you only
+// travel, so transportation opens and the rest collapse (the host provides
+// them) — still expandable if you want to bring your own.
+interface Need {
+  key: string;
+  label: string;
+  icon: string;
+  hint: string;
+  placeholder: string;
+  openHome: boolean;
+  openAway: boolean;
+}
+const NEEDS: Need[] = [
+  { key: 'transport', label: 'Transportation', icon: 'ti-bus', hint: 'Bus/van, departure time and driver.', placeholder: 'e.g. 2:45 p.m. — Warrior Big Bus 1 (Lorenzo)', openHome: false, openAway: true },
+  { key: 'trainer', label: 'Athletic trainer', icon: 'ti-first-aid-kit', hint: 'On-site trainer (the host usually provides one).', placeholder: 'Assign from training staff, or name', openHome: true, openAway: false },
+  { key: 'officials', label: 'Game officials / referees', icon: 'ti-whistle', hint: 'Refs/umpires — booked by the home team.', placeholder: 'e.g. 3 officials via county assignor', openHome: true, openAway: false },
+  { key: 'av', label: 'AV / scoreboard', icon: 'ti-device-tv', hint: 'Scoreboard, PA, livestream.', placeholder: 'Scoreboard + PA; livestream?', openHome: true, openAway: false },
+  { key: 'concessions', label: 'Concessions', icon: 'ti-cup', hint: 'Snack bar / booster table.', placeholder: 'Open snack bar; who staffs it?', openHome: true, openAway: false },
+  { key: 'security', label: 'Security', icon: 'ti-shield', hint: 'Gate and crowd coverage.', placeholder: '# guards / gate coverage', openHome: true, openAway: false },
+];
+
+function NeedsAccordion({ homeAway }: { homeAway: string }) {
+  const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(NEEDS.map((n) => [n.key, false])));
+
+  // Re-seed which needs are expanded whenever Home/Away changes.
+  useEffect(() => {
+    if (!homeAway) return;
+    const away = homeAway === 'Away';
+    setOpen(Object.fromEntries(NEEDS.map((n) => [n.key, away ? n.openAway : n.openHome])));
+  }, [homeAway]);
+
+  const note = !homeAway
+    ? 'Pick Home or Away and we’ll open the needs that usually apply.'
+    : homeAway === 'Away'
+      ? 'Away game — only travel is open. Expand anything extra you want to bring.'
+      : 'Home game — the needs you host are open. Collapse any you don’t need.';
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>Needs — each opens its own tracked request</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 9 }}>{note}</div>
+      <div className="needs">
+        {NEEDS.map((n) => {
+          const isOpen = open[n.key];
+          return (
+            <div className={'need' + (isOpen ? ' open' : '')} key={n.key}>
+              <button type="button" className="need-head" onClick={() => setOpen((o) => ({ ...o, [n.key]: !o[n.key] }))}>
+                <i className={'ti ' + (isOpen ? 'ti-chevron-down' : 'ti-chevron-right') + ' need-chev'} />
+                <i className={'ti ' + n.icon + ' need-ico'} />
+                <span className="need-name">{n.label}</span>
+                <span className={'need-status ' + (isOpen ? 'on' : 'off')}>{isOpen ? 'Requesting' : 'Not needed'}</span>
+              </button>
+              {isOpen && (
+                <div className="need-body">
+                  <div className="need-hint">{n.hint}</div>
+                  <input type="text" placeholder={n.placeholder} style={inputStyle} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function FacRow({ r, sel, star, onPick }: { r: string; sel: boolean; star?: boolean; onPick: (r: string) => void }) {
   return (
@@ -365,20 +431,7 @@ function AthleticsForm() {
         <input type="text" placeholder="e.g. 2:30 p.m. — when students leave class" style={inputStyle} />
       </Labeled>
 
-      <Labeled label={away ? 'Transportation' : 'Transportation (if students travel)'}>
-        <input type="text" placeholder="e.g. 2:45 p.m. bus (Lorenzo) — or none" style={inputStyle} />
-      </Labeled>
-
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>Needs — routed to each team</div>
-        <div style={{ display: 'grid', gap: 9 }}>
-          {ATH_NEEDS.map((o) => (
-            <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)' }}>
-              <input type="checkbox" style={{ width: 18, height: 18 }} /> {o}
-            </label>
-          ))}
-        </div>
-      </div>
+      <NeedsAccordion homeAway={homeAway} />
 
       <Labeled label="Notes">
         <textarea placeholder="Anything athletics, facilities or security should know" rows={3} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical' }} />
