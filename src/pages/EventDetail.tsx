@@ -34,16 +34,29 @@ export default function EventDetail() {
         <i className="ti ti-chevron-left" /> Back
       </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-        <span
-          className="pill"
-          style={{
-            background: 'color-mix(in srgb, ' + statusColor(ev.status) + ' 14%, transparent)',
-            color: statusColor(ev.status),
-          }}
-        >
-          {ev.status}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+        {ev.kind === 'notice' ? (
+          <span className="pill" style={{ background: 'color-mix(in srgb, var(--info) 14%, transparent)', color: 'var(--info)' }}>
+            <i className="ti ti-info-circle" style={{ fontSize: 13, marginRight: 4 }} />
+            Notice — no space booked
+          </span>
+        ) : (
+          <span
+            className="pill"
+            style={{
+              background: 'color-mix(in srgb, ' + statusColor(ev.status) + ' 14%, transparent)',
+              color: statusColor(ev.status),
+            }}
+          >
+            {ev.status}
+          </span>
+        )}
+        {ev.audience && (
+          <span className="pill" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>
+            <i className="ti ti-users-group" style={{ fontSize: 13, marginRight: 4 }} />
+            {ev.audience}
+          </span>
+        )}
         {conflicted && (
           <span className="pill" style={{ background: 'color-mix(in srgb, var(--bad) 14%, transparent)', color: 'var(--bad)' }}>
             Double-booked
@@ -65,8 +78,8 @@ export default function EventDetail() {
           {ev.all_day ? 'All day' : `${fmtTime(ev.starts_at)} – ${fmtTime(ev.ends_at)}`}
         </div>
         <div className="detail-meta">
-          <i className="ti ti-door" />
-          {ev.rooms.join(', ') || 'No room assigned'}
+          <i className={'ti ' + (ev.kind === 'notice' ? 'ti-map-pin' : 'ti-door')} />
+          {ev.rooms.join(', ') || ev.location || (ev.kind === 'notice' ? 'No campus space needed' : 'No room assigned')}
         </div>
         {ev.resources.length > 0 && (
           <div className="detail-meta">
@@ -91,6 +104,32 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {(ev.assignments?.length ?? 0) > 0 && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Support &amp; assignments</span>
+            <span className="act">{ev.assignments!.length}</span>
+          </div>
+          <div className="list">
+            {ev.assignments!.map((a, i) => (
+              <div key={a.role + a.person}>
+                {i > 0 && <div className="divider" style={{ marginLeft: 16 }} />}
+                <div className="row" style={{ cursor: 'default' }}>
+                  <span className="dot" style={{ background: statusColor(a.status || 'Approved') }} />
+                  <span className="body">
+                    <span className="title">{a.role}</span>
+                    <span className="sub">{a.person}</span>
+                  </span>
+                  <span className="pill" style={{ background: 'var(--surface-2)', color: statusColor(a.status || 'Approved') }}>
+                    {a.status || 'Approved'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {canApprove && ev.status === 'Pending' && (
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>

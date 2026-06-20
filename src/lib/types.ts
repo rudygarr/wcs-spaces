@@ -18,6 +18,18 @@ export interface WcsEvent {
   // 'public' = pulled from the school's master calendar feed; 'internal' = booked in-app.
   source?: 'public' | 'internal';
   category?: string;
+  // 'booking' reserves campus space; 'notice' is calendar-only awareness (camps,
+  // spirit week, exam days, away games) — it can still carry assignments.
+  kind?: 'booking' | 'notice';
+  audience?: string;
+  // Needs hanging off the event — AV, transport, chaperones — each routed on its own.
+  assignments?: Assignment[];
+}
+
+export interface Assignment {
+  role: string;
+  person: string;
+  status?: EventStatus;
 }
 
 export interface Person {

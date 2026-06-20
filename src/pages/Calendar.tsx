@@ -11,15 +11,20 @@ import {
   startOfWeek,
   dayKey,
   statusColor,
+  isMine,
 } from '../lib/data';
 import { useStore } from '../lib/store';
+import { useSession } from '../lib/session';
 
 export default function Calendar() {
   const nav = useNavigate();
   const { db } = useStore();
+  const { user } = useSession();
   const [day, setDay] = useState<Date>(DEMO_TODAY);
-  const list = eventsOnDay(db.events, day);
-  const conflicts = findConflicts(list);
+  const [view, setView] = useState<'mine' | 'school'>('school');
+  const dayEvents = eventsOnDay(db.events, day);
+  const list = view === 'mine' ? dayEvents.filter((e) => isMine(e, user.name)) : dayEvents;
+  const conflicts = findConflicts(dayEvents);
   const week = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(day), i));
 
   return (
@@ -74,9 +79,17 @@ export default function Calendar() {
         })}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div className="seg seg-sm" style={{ flex: 1 }}>
+          <button className={view === 'mine' ? 'active' : ''} onClick={() => setView('mine')}>
+            Your events
+          </button>
+          <button className={view === 'school' ? 'active' : ''} onClick={() => setView('school')}>
+            School events
+          </button>
+        </div>
         <button className="fab" onClick={() => nav('/book?date=' + dayKey(day))}>
-          <i className="ti ti-plus" /> Book a space
+          <i className="ti ti-plus" /> Book
         </button>
       </div>
 
@@ -93,9 +106,15 @@ export default function Calendar() {
       )}
 
       <div className="list">
-        {list.length === 0 && <div className="empty">Nothing scheduled this day.</div>}
+        {list.length === 0 && view === 'mine' && (
+          <button className="empty" style={{ width: '100%', background: 'none', border: 'none' }} onClick={() => setView('school')}>
+            Nothing of yours this day — see school events →
+          </button>
+        )}
+        {list.length === 0 && view === 'school' && <div className="empty">Nothing scheduled this day.</div>}
         {list.map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
+          const notice = e.kind === 'notice';
           return (
             <div key={e.id}>
               {i > 0 && <div className="divider" />}
@@ -110,12 +129,16 @@ export default function Calendar() {
                     </>
                   )}
                 </span>
-                <span className="dot" style={{ background: conflicted ? 'var(--bad)' : statusColor(e.status) }} />
+                <span
+                  className="dot"
+                  style={{ background: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status) }}
+                />
                 <span className="body">
                   <span className="title">{e.name}</span>
                   <span className="sub">
-                    {e.rooms.join(', ') || 'No room'}
-                    {e.owner ? ' · ' + e.owner : ''}
+                    {notice
+                      ? e.location || (e.audience ? e.audience : 'No space booked')
+                      : `${e.rooms.join(', ') || 'No room'}${e.owner ? ' · ' + e.owner : ''}`}
                   </span>
                   {e.resources.length > 0 && (
                     <span className="sub" style={{ color: 'var(--text-3)' }}>
@@ -123,15 +146,25 @@ export default function Calendar() {
                       {e.resources.join(', ')}
                     </span>
                   )}
+                  {(e.assignments?.length ?? 0) > 0 && (
+                    <span className="sub" style={{ color: 'var(--text-3)' }}>
+                      <i className="ti ti-users" style={{ fontSize: 12, marginRight: 4 }} />
+                      {e.assignments!.map((a) => a.role).join(', ')}
+                    </span>
+                  )}
                 </span>
                 <span
                   className="pill"
                   style={{
-                    background: conflicted ? 'color-mix(in srgb, var(--bad) 14%, transparent)' : 'var(--surface-2)',
-                    color: conflicted ? 'var(--bad)' : statusColor(e.status),
+                    background: conflicted
+                      ? 'color-mix(in srgb, var(--bad) 14%, transparent)'
+                      : notice
+                        ? 'color-mix(in srgb, var(--info) 14%, transparent)'
+                        : 'var(--surface-2)',
+                    color: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status),
                   }}
                 >
-                  {conflicted ? 'Conflict' : e.status}
+                  {conflicted ? 'Conflict' : notice ? 'FYI' : e.status}
                 </span>
               </button>
             </div>

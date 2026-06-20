@@ -52,6 +52,12 @@ export function eventsOnDay<T extends WcsEvent>(list: T[], d: Date): T[] {
 // first lively week of school so the hub never looks empty.
 export const DEMO_TODAY = new Date('2026-08-20T16:00:00Z');
 
+// "Mine" = I own it, or I'm assigned a need on it (AV, transport, chaperone…).
+export function isMine(e: WcsEvent, name: string): boolean {
+  if (e.owner === name) return true;
+  return !!e.assignments?.some((a) => a.person === name);
+}
+
 export function statusColor(status: string): string {
   if (status === 'Approved') return 'var(--ok)';
   if (status === 'Pending') return 'var(--warn)';

@@ -451,6 +451,13 @@
   color: var(--text-1);
   font-weight: 500;
 }
+.seg-sm {
+  display: flex;
+}
+.seg-sm button {
+  flex: 1;
+  text-align: center;
+}
 
 .soon {
   text-align: center;

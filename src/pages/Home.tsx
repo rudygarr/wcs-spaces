@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusColor } from '../lib/data';
+import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusColor, isMine } from '../lib/data';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 
@@ -21,7 +22,10 @@ export default function Home() {
   const nav = useNavigate();
   const { user } = useSession();
   const { db } = useStore();
+  const [view, setView] = useState<'mine' | 'school'>('mine');
   const today = eventsOnDay(db.events, DEMO_TODAY);
+  const mine = today.filter((e) => isMine(e, user.name));
+  const shown = view === 'mine' ? mine : today;
   const conflicts = findConflicts(today);
   const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
   const firstName = user.name.split(' ')[0];
@@ -57,22 +61,42 @@ export default function Home() {
         </span>
       </div>
 
+      <div className="seg seg-sm" style={{ marginBottom: 14 }}>
+        <button className={view === 'mine' ? 'active' : ''} onClick={() => setView('mine')}>
+          Your events
+        </button>
+        <button className={view === 'school' ? 'active' : ''} onClick={() => setView('school')}>
+          School events
+        </button>
+      </div>
+
       <div className="list" style={{ marginBottom: 24 }}>
-        {today.length === 0 && <div className="empty">Nothing scheduled.</div>}
-        {today.slice(0, 6).map((e, i) => {
+        {shown.length === 0 && view === 'mine' && (
+          <button className="empty" style={{ width: '100%', background: 'none', border: 'none' }} onClick={() => setView('school')}>
+            Nothing on your plate today — see what's happening at school →
+          </button>
+        )}
+        {shown.length === 0 && view === 'school' && <div className="empty">Nothing scheduled.</div>}
+        {shown.slice(0, 6).map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
+          const notice = e.kind === 'notice';
           return (
             <div key={e.id}>
               {i > 0 && <div className="divider" />}
               <button className="row" onClick={() => nav('/event/' + e.id)}>
                 <span className="time tnum">{e.all_day ? 'All day' : fmtTime(e.starts_at)}</span>
-                <span className="dot" style={{ background: conflicted ? 'var(--bad)' : statusColor(e.status) }} />
+                <span
+                  className="dot"
+                  style={{ background: conflicted ? 'var(--bad)' : notice ? 'var(--info)' : statusColor(e.status) }}
+                />
                 <span className="body">
                   <span className="title">{e.name}</span>
                   <span className="sub" style={conflicted ? { color: 'var(--bad)' } : undefined}>
                     {conflicted
                       ? `${e.rooms[0]} · double-booked`
-                      : `${e.rooms.join(', ') || 'No room'}${e.owner ? ' · ' + e.owner : ''}`}
+                      : notice
+                        ? `${e.audience ? e.audience + ' · ' : ''}FYI — no space booked`
+                        : `${e.rooms.join(', ') || 'No room'}${e.owner ? ' · ' + e.owner : ''}`}
                   </span>
                 </span>
                 <i className="ti ti-chevron-right chev" />

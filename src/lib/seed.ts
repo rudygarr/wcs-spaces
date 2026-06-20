@@ -20,5 +20,88 @@ export function buildSeed(): Database {
     .filter((e) => !!e.starts_at)
     .map((e, i) => ({ source: 'internal', ...e, id: `e-${i}` }));
   const publicEvents: EventRec[] = (rawPublic as WcsEvent[]).map((e, i) => ({ ...e, id: `pub-${i}` }));
-  return { rooms, resources, people, events: [...internal, ...publicEvents] };
+  return { rooms, resources, people, events: [...internal, ...publicEvents, ...notices] };
 }
+
+// Hand-authored examples of the "notice" model: events that reserve no campus
+// space but still belong on the calendar — and can still carry assignments.
+const base = {
+  setup_starts: null,
+  teardown_ends: null,
+  recurrence: null,
+  percent_approved: 100,
+  status: 'Approved' as const,
+};
+
+const notices: EventRec[] = [
+  {
+    ...base,
+    id: 'n-0',
+    name: 'GR8 Escape — 8th Grade Camp',
+    kind: 'notice',
+    audience: '8th Grade',
+    all_day: true,
+    starts_at: '2026-10-07T00:00:00-04:00',
+    ends_at: '2026-10-09T00:00:00-04:00',
+    location: 'Off campus — GR8 Escape retreat center',
+    owner: 'Middle School Office',
+    details: 'Annual overnight 8th-grade retreat. Nothing on campus to book — listed so the whole school knows the grade is away. Support needs are assigned below.',
+    rooms: [],
+    resources: ['Transportation'],
+    category: 'Community',
+    assignments: [
+      { role: 'AV Support', person: 'Rudy Garrido', status: 'Approved' },
+      { role: 'Transportation', person: 'Transportation Dept.', status: 'Approved' },
+      { role: 'Lead Chaperone', person: 'Middle School Office', status: 'Approved' },
+    ],
+  },
+  {
+    ...base,
+    id: 'n-1',
+    name: 'All-School Convocation',
+    kind: 'booking',
+    audience: 'All School',
+    all_day: false,
+    starts_at: '2026-08-20T08:30:00-04:00',
+    ends_at: '2026-08-20T09:30:00-04:00',
+    location: 'The Lighthouse PAC - Main',
+    owner: 'Spiritual Life',
+    details: 'Opening convocation for the school year.',
+    rooms: ['The Lighthouse PAC - Main'],
+    resources: ['Sound', 'Lighting'],
+    category: 'Community',
+    assignments: [{ role: 'AV Support', person: 'Rudy Garrido', status: 'Approved' }],
+  },
+  {
+    ...base,
+    id: 'n-2',
+    name: 'No School — Teacher Workday',
+    kind: 'notice',
+    audience: 'All School',
+    all_day: true,
+    starts_at: '2026-10-12T00:00:00-04:00',
+    ends_at: null,
+    location: null,
+    owner: "Head of School's Office",
+    details: 'Campus closed to students.',
+    rooms: [],
+    resources: [],
+    category: 'Community',
+  },
+  {
+    ...base,
+    id: 'n-3',
+    name: 'Spirit Week',
+    kind: 'notice',
+    audience: 'All School',
+    all_day: true,
+    starts_at: '2026-10-19T00:00:00-04:00',
+    ends_at: '2026-10-23T00:00:00-04:00',
+    location: null,
+    owner: 'Student Life',
+    details: 'Themed dress-up days all week leading into Homecoming.',
+    rooms: [],
+    resources: [],
+    category: 'Community',
+  },
+];
