@@ -14,6 +14,7 @@ import {
   isMine,
 } from '../lib/data';
 import { blackoutForDate } from '../lib/calendar';
+import { buildICS, downloadICS } from '../lib/ics';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 
@@ -89,6 +90,20 @@ export default function Calendar() {
             School events
           </button>
         </div>
+        <button
+          className="btn-soft"
+          aria-label="Export to calendar"
+          style={{ padding: '0 12px' }}
+          onClick={() => {
+            const evs =
+              view === 'mine'
+                ? db.events.filter((e) => isMine(e, user.name) && e.starts_at)
+                : db.events.filter((e) => e.starts_at);
+            downloadICS(view === 'mine' ? 'my-wcs-calendar' : 'wcs-school-calendar', buildICS(evs, view === 'mine' ? `${user.name} — WCS` : 'WCS School Calendar'));
+          }}
+        >
+          <i className="ti ti-calendar-down" />
+        </button>
         <button className="fab" onClick={() => nav('/book?date=' + dayKey(day))}>
           <i className="ti ti-plus" /> Book
         </button>

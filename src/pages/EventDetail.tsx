@@ -4,6 +4,7 @@ import { useSession } from '../lib/session';
 import { fmtTime, fmtDateLong, statusColor, findConflicts } from '../lib/data';
 import { approvalSteps, derivedStatus, canApprove as canApproveEvent } from '../lib/approvals';
 import { conflictKey, isConflictResolved } from '../lib/conflicts';
+import { buildICS, downloadICS, slug } from '../lib/ics';
 import { ConflictThread } from '../components/ConflictThread';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import type { ApprovalRec, EventRec } from '../lib/types';
@@ -190,6 +191,16 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {ev.starts_at && (
+        <button
+          className="btn-soft"
+          style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}
+          onClick={() => downloadICS(slug(ev.name), buildICS([ev], ev.name))}
+        >
+          <i className="ti ti-calendar-plus" /> Add to Outlook / calendar
+        </button>
+      )}
 
       {ev.setupStyle && (
         <>
