@@ -1,12 +1,15 @@
 import type { CSSProperties } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { allRooms } from '../data/inventory';
+import { teamSeasons } from '../data/teams';
 import { useSession } from '../lib/session';
 
 type Field =
   | { kind: 'text'; label: string; placeholder?: string }
   | { kind: 'area'; label: string; placeholder?: string }
   | { kind: 'select'; label: string; options: string[] }
+  | { kind: 'teamselect'; label: string }
+  | { kind: 'checks'; label: string; options: string[] }
   | { kind: 'date'; label: string }
   | { kind: 'check'; label: string }
   | { kind: 'file'; label: string };
@@ -18,6 +21,7 @@ interface Door {
   title: string;
   blurb: string;
   replaces: string;
+  routesTo?: string;
   fields: Field[];
 }
 
@@ -71,6 +75,29 @@ const doors: Door[] = [
     ],
   },
   {
+    id: 'athletics',
+    cls: 't-ath',
+    icon: 'ti-ball-basketball',
+    title: 'Athletics event',
+    blurb: 'Schedule a game, practice or tournament — home or away.',
+    replaces: 'Athletic calendar (Blackbaud)',
+    routesTo: 'the Athletic Director',
+    fields: [
+      { kind: 'select', label: 'Event type', options: ['Game', 'Practice', 'Scrimmage', 'Tournament', 'Tryout', 'Other'] },
+      { kind: 'teamselect', label: 'Team' },
+      { kind: 'select', label: 'Home or Away', options: ['Home', 'Away'] },
+      { kind: 'text', label: 'Opponent', placeholder: 'e.g. Pine Crest School' },
+      { kind: 'date', label: 'Date & time' },
+      { kind: 'select', label: 'Facility (home events — checked for conflicts)', options: allRooms },
+      {
+        kind: 'checks',
+        label: 'Needs — routed to each team',
+        options: ['Transportation (away)', 'Early dismissal (away)', 'AV / scoreboard', 'Athletic trainer', 'Game officials', 'Concessions', 'Security'],
+      },
+      { kind: 'area', label: 'Notes', placeholder: 'Anything athletics, facilities or security should know' },
+    ],
+  },
+  {
     id: 'visitor',
     cls: 't-visit',
     icon: 'ti-id',
@@ -114,6 +141,28 @@ function FieldView({ f }: { f: Field }) {
             ))}
           </select>
           <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-3)', pointerEvents: 'none' }} />
+        </div>
+      ) : f.kind === 'teamselect' ? (
+        <div style={{ position: 'relative' }}>
+          <select style={{ ...inputStyle, appearance: 'none' }}>
+            <option value="">Select team…</option>
+            {teamSeasons.map((s) => (
+              <optgroup key={s.season} label={s.season}>
+                {s.teams.map((t) => (
+                  <option key={s.season + t}>{t}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 12, top: 12, color: 'var(--text-3)', pointerEvents: 'none' }} />
+        </div>
+      ) : f.kind === 'checks' ? (
+        <div style={{ display: 'grid', gap: 9 }}>
+          {f.options.map((o) => (
+            <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)' }}>
+              <input type="checkbox" style={{ width: 18, height: 18 }} /> {o}
+            </label>
+          ))}
         </div>
       ) : f.kind === 'check' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)' }}>
@@ -160,8 +209,8 @@ export default function Requests() {
         <div className="banner" style={{ background: 'var(--green-tint)', borderColor: 'transparent', color: 'var(--text-2)', marginTop: 14 }}>
           <i className="ti ti-info-circle" style={{ color: 'var(--green)' }} />
           <span>
-            Preview of the request form. Submitting as <b style={{ color: 'var(--text-1)' }}>{user.name}</b> — routes through the same
-            approve → assign → notify engine as a room booking.
+            Preview of the request form. Submitting as <b style={{ color: 'var(--text-1)' }}>{user.name}</b> — routes to{' '}
+            {active.routesTo ?? 'the approvers'} through the same approve → assign → notify engine as a room booking.
           </span>
         </div>
 
@@ -184,7 +233,7 @@ export default function Requests() {
   return (
     <>
       <h1 className="page-h">Requests</h1>
-      <div className="page-sub">One hub, four front doors — every request rides the same approval engine.</div>
+      <div className="page-sub">One hub, five front doors — every request rides the same approval engine.</div>
 
       <div style={{ display: 'grid', gap: 12 }}>
         {doors.map((d) => (

@@ -1,6 +1,7 @@
 import rawEvents from '../data/events.json';
 import rawPeople from '../data/people.json';
 import rawPublic from '../data/public-events.json';
+import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
 
@@ -20,7 +21,9 @@ export function buildSeed(): Database {
     .filter((e) => !!e.starts_at)
     .map((e, i) => ({ source: 'internal', ...e, id: `e-${i}` }));
   const publicEvents: EventRec[] = (rawPublic as WcsEvent[]).map((e, i) => ({ ...e, id: `pub-${i}` }));
-  return { rooms, resources, people, events: [...internal, ...publicEvents, ...notices] };
+  // Athletics calendar — separate iCal feed (games, tournaments, dept events).
+  const athletic: EventRec[] = (rawAthletic as WcsEvent[]).map((e, i) => ({ ...e, id: `ath-${i}` }));
+  return { rooms, resources, people, events: [...internal, ...publicEvents, ...athletic, ...notices] };
 }
 
 // Hand-authored examples of the "notice" model: events that reserve no campus

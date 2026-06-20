@@ -57,6 +57,18 @@ export default function EventDetail() {
             {ev.audience}
           </span>
         )}
+        {ev.homeAway && (
+          <span
+            className="pill"
+            style={{
+              background: 'color-mix(in srgb, var(--gold) 16%, transparent)',
+              color: 'var(--gold)',
+            }}
+          >
+            <i className={'ti ' + (ev.homeAway === 'Home' ? 'ti-home' : 'ti-bus')} style={{ fontSize: 13, marginRight: 4 }} />
+            {ev.homeAway}
+          </span>
+        )}
         {conflicted && (
           <span className="pill" style={{ background: 'color-mix(in srgb, var(--bad) 14%, transparent)', color: 'var(--bad)' }}>
             Double-booked
@@ -85,6 +97,18 @@ export default function EventDetail() {
           <div className="detail-meta">
             <i className="ti ti-plug-connected" />
             {ev.resources.join(', ')}
+          </div>
+        )}
+        {ev.team && (
+          <div className="detail-meta">
+            <i className="ti ti-shirt-sport" />
+            {ev.team}
+          </div>
+        )}
+        {ev.opponent && (
+          <div className="detail-meta">
+            <i className="ti ti-swords" />
+            vs {ev.opponent}
           </div>
         )}
         <div className="detail-meta">

@@ -24,6 +24,10 @@ export interface WcsEvent {
   audience?: string;
   // Needs hanging off the event — AV, transport, chaperones — each routed on its own.
   assignments?: Assignment[];
+  // Athletics: away games are notices (no campus space) but still need visibility + transport.
+  team?: string;
+  homeAway?: 'Home' | 'Away';
+  opponent?: string;
 }
 
 export interface Assignment {

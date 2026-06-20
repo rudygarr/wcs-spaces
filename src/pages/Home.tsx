@@ -8,6 +8,7 @@ const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
   { cls: 't-maint', icon: 'ti-tool', label: 'Maintenance', to: '/requests?door=maintenance' },
   { cls: 't-it', icon: 'ti-device-laptop', label: 'IT', to: '/requests?door=it' },
+  { cls: 't-ath', icon: 'ti-ball-basketball', label: 'Athletics', to: '/requests?door=athletics' },
   { cls: 't-visit', icon: 'ti-id', label: 'Visitor', to: '/requests?door=visitor' },
 ];
 
