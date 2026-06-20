@@ -4,12 +4,12 @@ import rawPublic from '../data/public-events.json';
 import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
-import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif } from './types';
+import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 9;
+export const SEED_VERSION = 10;
 
 // Derive starter notifications from the seeded assignments, so each crew
 // member already has a ringing bell when you "view as" them.
@@ -44,6 +44,33 @@ function seedNotifs(): Notif[] {
   return out;
 }
 
+// A seeded example of the conflict-as-conversation feature: two owners (Dance
+// tech vs. the Spelling Bee) negotiating the Lighthouse Theater. Left OPEN so a
+// demo can read the thread and resolve it live. Keyed by the sorted event-id
+// pair (e-311/e-312, deterministic from events.json order) — see
+// conflicts.conflictKey. If that order shifts, the thread simply won't attach.
+function seedConflictNotes(): ConflictNote[] {
+  const key = 'e-311|e-312';
+  return [
+    {
+      id: 'cn-seed-1',
+      conflictKey: key,
+      author: 'Vicki Kaplan',
+      body: 'Hi Adriana — the MS Spelling Bee is set for the Theater that morning. Any chance dance tech can start a little later?',
+      at: '2026-11-05T14:10:00Z',
+      kind: 'note',
+    },
+    {
+      id: 'cn-seed-2',
+      conflictKey: key,
+      author: 'Adriana Marrero',
+      body: 'We need the stage early for lighting, but we can hold the house until you wrap. Want to share the morning?',
+      at: '2026-11-05T15:02:00Z',
+      kind: 'note',
+    },
+  ];
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -75,6 +102,7 @@ export function buildSeed(): Database {
     drivers: seedDrivers,
     templates: seedTemplates,
     notifications: seedNotifs(),
+    conflictNotes: seedConflictNotes(),
     seedVersion: SEED_VERSION,
   };
 }

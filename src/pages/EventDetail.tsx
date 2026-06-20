@@ -3,8 +3,10 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtTime, fmtDateLong, statusColor, findConflicts } from '../lib/data';
 import { approvalSteps, derivedStatus, canApprove as canApproveEvent } from '../lib/approvals';
+import { conflictKey, isConflictResolved } from '../lib/conflicts';
+import { ConflictThread } from '../components/ConflictThread';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
-import type { ApprovalRec } from '../lib/types';
+import type { ApprovalRec, EventRec } from '../lib/types';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -28,7 +30,16 @@ export default function EventDetail() {
   const dayList = db.events.filter(
     (e) => e.starts_at && ev.starts_at && e.starts_at.slice(0, 10) === ev.starts_at.slice(0, 10),
   );
-  const conflicted = findConflicts(dayList).some((c) => c.a.id === ev.id || c.b.id === ev.id);
+  // Each clash this event is part of, paired with the other booking + its
+  // conversation key. Resolved (worked-out) pairs no longer count as conflicted.
+  const conflictPairs = findConflicts(dayList)
+    .filter((c) => c.a.id === ev.id || c.b.id === ev.id)
+    .map((c) => {
+      const other: EventRec = c.a.id === ev.id ? c.b : c.a;
+      const key = conflictKey(c.a.id, c.b.id);
+      return { other, room: c.room, key, resolved: isConflictResolved(db, key) };
+    });
+  const conflicted = conflictPairs.some((p) => !p.resolved);
 
   // Booking approval routing: each room's area owner must sign off.
   const steps = approvalSteps(db, ev);
@@ -102,6 +113,18 @@ export default function EventDetail() {
           </span>
         )}
       </div>
+
+      {conflictPairs.length > 0 && (
+        <>
+          <div className="section-label" style={{ marginTop: 20 }}>
+            <span className="lbl">Work it out</span>
+            <span className="act">{conflictPairs.filter((p) => !p.resolved).length} open</span>
+          </div>
+          {conflictPairs.map((p) => (
+            <ConflictThread key={p.key} conflictKey={p.key} other={p.other} room={p.room} resolved={p.resolved} />
+          ))}
+        </>
+      )}
 
       <h1 className="page-h" style={{ marginTop: 10, color: conflicted ? 'var(--warn)' : undefined }}>
         {ev.name}

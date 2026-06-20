@@ -1545,3 +1545,50 @@
   background: var(--surface-2);
 }
 .ins-seg { display: block; }
+
+/* ---- Conflict-as-conversation thread ---- */
+.cthread {
+  border: 0.5px solid var(--border-2);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  padding: 13px 14px;
+  margin-bottom: 12px;
+}
+.ct-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.ct-room { font-weight: 650; font-size: 15px; color: var(--text-1); }
+.ct-other { font-size: 13px; color: var(--text-2); }
+.ct-status, .ct-resolved {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; padding: 7px 10px; border-radius: var(--r-md); margin-bottom: 10px;
+}
+.ct-status { color: var(--warn); background: var(--warn-tint); }
+.ct-resolved { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.ct-msgs { display: flex; flex-direction: column; gap: 9px; margin-bottom: 11px; }
+.ct-msg { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; max-width: 86%; }
+.ct-msg.mine { align-self: flex-end; align-items: flex-end; }
+.ct-meta { font-size: 11px; color: var(--text-3); padding: 0 4px; }
+.ct-accept-tag { color: var(--ok); font-weight: 600; }
+.ct-bubble {
+  font-size: 14px; line-height: 1.35; color: var(--text-1);
+  background: var(--surface-2); padding: 8px 11px; border-radius: 14px;
+}
+.ct-msg.mine .ct-bubble { background: var(--green); color: #fff; }
+.ct-quick { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.ct-compose { display: flex; gap: 8px; align-items: center; }
+.ct-input {
+  flex: 1; height: 38px; padding: 0 13px; font-size: 14px;
+  border: 0.5px solid var(--border-2); border-radius: 999px;
+  background: var(--surface-2); color: var(--text-1); outline: none;
+}
+.ct-send {
+  width: 38px; height: 38px; flex-shrink: 0; border: none; border-radius: 50%;
+  background: var(--green); color: #fff; font-size: 17px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.ct-send:disabled { opacity: 0.4; }
+.ct-accept {
+  width: 100%; margin-top: 10px; padding: 9px; border-radius: var(--r-md);
+  border: 0.5px solid var(--ok); background: transparent; color: var(--ok);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}

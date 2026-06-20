@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 
@@ -25,6 +25,7 @@ interface StoreCtx {
   removeTemplate: (id: string) => void;
   notify: (n: Omit<Notif, 'id' | 'createdAt' | 'read'>) => void;
   markNotifsReadFor: (name: string) => void;
+  addConflictNote: (n: Omit<ConflictNote, 'id' | 'at'>) => void;
   reset: () => void;
 }
 
@@ -147,6 +148,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? { ...d, notifications: d.notifications.map((n) => (n.to === name ? { ...n, read: true } : n)) }
           : d,
       );
+    },
+    addConflictNote(n) {
+      const note: ConflictNote = { ...n, id: uid('cn'), at: new Date().toISOString() };
+      commit((d) => ({ ...d, conflictNotes: [...(d.conflictNotes ?? []), note] }));
     },
     reset() {
       void clearDB();

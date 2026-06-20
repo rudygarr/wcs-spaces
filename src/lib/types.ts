@@ -173,6 +173,20 @@ export interface Notif {
   read?: boolean;
 }
 
+// A message in a conflict's conversation. Our differentiator: a double-booking
+// isn't a wall, it's a thread between the two owners to work it out (shift time,
+// share the space, or accept the overlap). `accept` posts also flip the conflict
+// to resolved so the warning clears everywhere.
+export interface ConflictNote {
+  id: string;
+  conflictKey: string; // sorted pair of event ids — see conflicts.conflictKey
+  author: string; // person name
+  body: string;
+  at: string;
+  // 'accept' marks the overlap as worked-out (clears the warning); 'note' is talk.
+  kind: 'note' | 'accept';
+}
+
 export interface Database {
   rooms: Room[];
   resources: Resource[];
@@ -182,6 +196,7 @@ export interface Database {
   drivers: Driver[];
   templates: Template[];
   notifications: Notif[];
+  conflictNotes?: ConflictNote[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;
