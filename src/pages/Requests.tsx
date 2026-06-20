@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { allRooms } from '../data/inventory';
+import { allRooms, roomFolders } from '../data/inventory';
 import { teamSeasons } from '../data/teams';
 import { sportOf, sportVenues, athleticFacilities } from '../data/athletic-venues';
 import { useSession } from '../lib/session';
@@ -200,6 +200,88 @@ const chevron = (
 
 const ATH_NEEDS = ['AV / scoreboard', 'Athletic trainer', 'Game officials', 'Concessions', 'Security'];
 
+function FacRow({ r, sel, star, onPick }: { r: string; sel: boolean; star?: boolean; onPick: (r: string) => void }) {
+  return (
+    <button type="button" className={'fac-row' + (sel ? ' sel' : '')} onClick={() => onPick(r)}>
+      {star && <i className="ti ti-star-filled" style={{ color: 'var(--gold)', fontSize: 13 }} />}
+      <span style={{ flex: 1 }}>{r}</span>
+      {sel && <i className="ti ti-check" style={{ color: 'var(--green)' }} />}
+    </button>
+  );
+}
+
+// Custom facility dropdown for athletics: shows only the athletics facilities
+// (with this sport's venues recommended on top), and hides every other campus
+// room behind a single "Other campus rooms" expander — because 99% of the time
+// the athletics facilities are all they need.
+function FacilityPicker({ team }: { team: string }) {
+  const [open, setOpen] = useState(false);
+  const [showOther, setShowOther] = useState(false);
+  const [selected, setSelected] = useState('');
+
+  const sport = team ? sportOf(team) : '';
+  const rec = (sport ? sportVenues[sport] : undefined) ?? [];
+  const recSet = new Set(rec);
+  const athOther = athleticFacilities.filter((r) => !recSet.has(r));
+  const inAth = new Set(athleticFacilities);
+  const otherFolders = roomFolders
+    .map((f) => ({ name: f.name, items: f.items.filter((r) => !inAth.has(r)) }))
+    .filter((f) => f.items.length > 0);
+
+  function choose(r: string) {
+    setSelected(r);
+    setOpen(false);
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left', cursor: 'pointer' }}
+      >
+        <span style={{ color: selected ? 'var(--text-1)' : 'var(--text-3)' }}>{selected || 'Select facility…'}</span>
+        <i className="ti ti-chevron-down" style={{ color: 'var(--text-3)' }} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div className="fac-pop">
+            {rec.length > 0 && (
+              <div className="fac-group">
+                <div className="fac-head">Recommended for {sport}</div>
+                {rec.map((r) => (
+                  <FacRow key={r} r={r} sel={selected === r} star onPick={choose} />
+                ))}
+              </div>
+            )}
+            <div className="fac-group">
+              <div className="fac-head">Athletics facilities</div>
+              {athOther.map((r) => (
+                <FacRow key={r} r={r} sel={selected === r} onPick={choose} />
+              ))}
+            </div>
+            <button type="button" className="fac-other" onClick={() => setShowOther((s) => !s)}>
+              <i className={'ti ' + (showOther ? 'ti-chevron-down' : 'ti-chevron-right')} />
+              Other campus rooms
+              <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 12 }}>{showOther ? 'Hide' : 'Show'}</span>
+            </button>
+            {showOther &&
+              otherFolders.map((f) => (
+                <div className="fac-group" key={f.name}>
+                  <div className="fac-head">{f.name}</div>
+                  {f.items.map((r) => (
+                    <FacRow key={r} r={r} sel={selected === r} onPick={choose} />
+                  ))}
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // The Athletics door is interactive (unlike the other config-driven forms): the
 // facility picker narrows to the venues a sport actually uses, and disappears
 // entirely for away games. Templates beat scrolling 49 rooms.
@@ -210,21 +292,6 @@ function AthleticsForm() {
   const sport = team ? sportOf(team) : '';
   const rec = sport ? sportVenues[sport] : undefined;
   const offCampus = !!sport && !rec;
-
-  const groups = useMemo(() => {
-    const used = new Set<string>();
-    const g: { label: string; rooms: string[] }[] = [];
-    if (rec) {
-      g.push({ label: `Recommended for ${sport}`, rooms: rec });
-      rec.forEach((r) => used.add(r));
-    }
-    const ath = athleticFacilities.filter((r) => !used.has(r));
-    g.push({ label: team ? 'Other athletics facilities' : 'Athletics facilities', rooms: ath });
-    ath.forEach((r) => used.add(r));
-    g.push({ label: 'Other campus rooms', rooms: allRooms.filter((r) => !used.has(r)) });
-    return g;
-  }, [team, sport, rec]);
-
   const away = homeAway === 'Away';
 
   return (
@@ -283,25 +350,13 @@ function AthleticsForm() {
         </div>
       ) : (
         <Labeled label="Facility">
-          <div style={{ position: 'relative' }}>
-            <select style={{ ...inputStyle, appearance: 'none' }} defaultValue={rec && rec.length === 1 ? rec[0] : ''}>
-              <option value="">Select facility…</option>
-              {groups.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.rooms.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            {chevron}
-          </div>
+          <FacilityPicker team={team} />
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
             {!team
               ? 'Pick a team and we’ll surface the right field or court first.'
               : offCampus
                 ? `${sport} usually plays off-campus — pick a campus facility only if hosting here.`
-                : `Showing ${sport} venues first. Checked for conflicts on submit.`}
+                : `Showing ${sport} venues first. Tap “Other campus rooms” for the full list.`}
           </div>
         </Labeled>
       )}

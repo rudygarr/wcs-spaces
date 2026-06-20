@@ -866,3 +866,66 @@
   border: 0.5px solid var(--border);
   border-radius: 14px;
 }
+
+/* ---- Athletics facility picker (custom dropdown) ---- */
+.fac-pop {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  z-index: 41;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-sm);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+  max-height: 340px;
+  overflow: auto;
+  padding: 6px;
+}
+.fac-group {
+  padding: 2px 0 4px;
+}
+.fac-head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  padding: 7px 10px 4px;
+}
+.fac-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--text-1);
+  font-size: 15px;
+  padding: 9px 10px;
+  border-radius: 9px;
+}
+.fac-row:hover {
+  background: var(--surface-2);
+}
+.fac-row.sel {
+  background: var(--green-tint);
+}
+.fac-other {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 0.5px solid var(--border);
+  margin-top: 4px;
+  color: var(--info);
+  font-size: 14px;
+  padding: 11px 10px 8px;
+}
+.fac-other:hover {
+  color: var(--info);
+  opacity: 0.8;
+}
