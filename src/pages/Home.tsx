@@ -34,6 +34,9 @@ export default function Home() {
   const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
   const openWork = (dept: string) => db.workItems.filter((w) => w.department === dept && w.status !== 'Done').length;
   const myTasks = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
+  const myOpenReqs =
+    db.workItems.filter((w) => w.requestedBy === user.name && w.status !== 'Done').length +
+    db.events.filter((e) => e.owner === user.name && e.kind !== 'notice' && e.status === 'Pending').length;
   const deptQueues = [
     { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
     { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
@@ -158,6 +161,23 @@ export default function Home() {
           <span className="body">
             <span className="title" style={{ color: 'var(--green)' }}>Assigned to you</span>
             <span className="sub">{myTasks} task{myTasks === 1 ? '' : 's'} on your plate</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {myOpenReqs > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/my')}
+          style={{ width: '100%', background: 'var(--surface)', border: '0.5px solid var(--border-2)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-clipboard-list" />
+          </span>
+          <span className="body">
+            <span className="title">Your requests</span>
+            <span className="sub">{myOpenReqs} in progress — track status</span>
           </span>
           <i className="ti ti-chevron-right chev" />
         </button>

@@ -15,6 +15,7 @@ import AthleticsWeek from './pages/AthleticsWeek';
 import Queue from './pages/Queue';
 import WorkDetail from './pages/WorkDetail';
 import Team from './pages/Team';
+import MyRequests from './pages/MyRequests';
 import './App.css';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/requests" element={<Requests />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/my" element={<MyRequests />} />
               <Route path="/work/:id" element={<WorkDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />
