@@ -28,6 +28,10 @@ export interface WcsEvent {
   team?: string;
   homeAway?: 'Home' | 'Away';
   opponent?: string;
+  // From the AD's weekly schedule: ED = when students leave class; transportation =
+  // bus/van departure time + driver (or vehicle), or null when none.
+  earlyDismissal?: string | null;
+  transportation?: string | null;
 }
 
 export interface Assignment {

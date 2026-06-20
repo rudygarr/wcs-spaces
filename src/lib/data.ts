@@ -52,6 +52,32 @@ export function eventsOnDay<T extends WcsEvent>(list: T[], d: Date): T[] {
 // first lively week of school so the hub never looks empty.
 export const DEMO_TODAY = new Date('2026-08-20T16:00:00Z');
 
+// Condense a roster team name into the AD's weekly-email shorthand:
+// "Volleyball - Girls - JV" → "JV G Volleyball", "Golf - Boys - Varsity" → "V B Golf".
+export function shortTeam(name?: string): string {
+  if (!name) return '';
+  const parts = name.split(' - ').map((s) => s.trim());
+  const sport = parts[0];
+  const lvlMap: Record<string, string> = {
+    Varsity: 'V',
+    JV: 'JV',
+    Freshmen: 'Fr',
+    'Middle School': 'MS',
+    'Middle School JV': 'MS JV',
+    'Middle School Varsity': 'MS V',
+    MS: 'MS',
+  };
+  let gender = '';
+  let level = '';
+  for (const p of parts.slice(1)) {
+    if (p === 'Boys') gender = 'B';
+    else if (p === 'Girls') gender = 'G';
+    else if (p === 'Co-Ed') gender = '';
+    else level = lvlMap[p] ?? p;
+  }
+  return [level, gender, sport].filter(Boolean).join(' ');
+}
+
 // "Mine" = I own it, or I'm assigned a need on it (AV, transport, chaperone…).
 export function isMine(e: WcsEvent, name: string): boolean {
   if (e.owner === name) return true;

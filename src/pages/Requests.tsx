@@ -89,6 +89,8 @@ const doors: Door[] = [
       { kind: 'text', label: 'Opponent', placeholder: 'e.g. Pine Crest School' },
       { kind: 'date', label: 'Date & time' },
       { kind: 'select', label: 'Facility (home events — checked for conflicts)', options: allRooms },
+      { kind: 'text', label: 'Early dismissal (ED)', placeholder: 'e.g. 2:30 p.m. — when students leave class' },
+      { kind: 'text', label: 'Transportation', placeholder: 'e.g. 2:45 p.m. bus (Lorenzo) — or none' },
       {
         kind: 'checks',
         label: 'Needs — routed to each team',

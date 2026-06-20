@@ -111,6 +111,18 @@ export default function EventDetail() {
             vs {ev.opponent}
           </div>
         )}
+        {ev.earlyDismissal && (
+          <div className="detail-meta">
+            <i className="ti ti-school" />
+            Early dismissal {ev.earlyDismissal}
+          </div>
+        )}
+        {ev.transportation && (
+          <div className="detail-meta">
+            <i className="ti ti-bus" />
+            Transportation {ev.transportation}
+          </div>
+        )}
         <div className="detail-meta">
           <i className="ti ti-user" />
           {ev.owner || 'No owner'}

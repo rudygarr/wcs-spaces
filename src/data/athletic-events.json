@@ -18,7 +18,9 @@
     "category": "Athletics",
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
-    "homeAway": "Home"
+    "homeAway": "Home",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Mater Lakes Academy",
@@ -40,7 +42,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "Mater Lakes Academy"
+    "opponent": "Mater Lakes Academy",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Pine Crest School",
@@ -62,7 +66,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "Pine Crest School"
+    "opponent": "Pine Crest School",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs St. Thomas Aquinas",
@@ -84,7 +90,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "St. Thomas Aquinas"
+    "opponent": "St. Thomas Aquinas",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "JV Volleyball Warrior Invite",
@@ -105,7 +113,9 @@
     "category": "Athletics",
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
-    "homeAway": "Home"
+    "homeAway": "Home",
+    "earlyDismissal": "2:00 p.m.",
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Miami Country Day School",
@@ -127,7 +137,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "Miami Country Day School"
+    "opponent": "Miami Country Day School",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "JV Volleyball Tri-Co Tournament",
@@ -148,7 +160,9 @@
     "category": "Athletics",
     "kind": "notice",
     "team": "Volleyball - Girls - JV",
-    "homeAway": "Away"
+    "homeAway": "Away",
+    "earlyDismissal": "1:30 p.m.",
+    "transportation": "1:45 p.m. (Lorenzo)"
   },
   {
     "name": "JV Volleyball Tri-Co Tournament",
@@ -169,7 +183,9 @@
     "category": "Athletics",
     "kind": "notice",
     "team": "Volleyball - Girls - JV",
-    "homeAway": "Away"
+    "homeAway": "Away",
+    "earlyDismissal": "7:30 a.m.",
+    "transportation": "7:45 a.m. (PJ)"
   },
   {
     "name": "Volleyball - Girls - JV",
@@ -189,7 +205,9 @@
     "source": "public",
     "category": "Athletics",
     "kind": "booking",
-    "homeAway": "Home"
+    "homeAway": "Home",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Doral Academy",
@@ -211,7 +229,9 @@
     "kind": "notice",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Away",
-    "opponent": "Doral Academy"
+    "opponent": "Doral Academy",
+    "earlyDismissal": "4:30 p.m.",
+    "transportation": "4:45 p.m. (Kevin)"
   },
   {
     "name": "Volleyball - Girls - JV vs The Kings Academy",
@@ -233,7 +253,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "The Kings Academy"
+    "opponent": "The Kings Academy",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Coral Gables HS",
@@ -255,7 +277,9 @@
     "kind": "notice",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Away",
-    "opponent": "Coral Gables HS"
+    "opponent": "Coral Gables HS",
+    "earlyDismissal": "2:30 p.m.",
+    "transportation": "2:45 p.m. (Sandra)"
   },
   {
     "name": "Volleyball - Girls - JV vs Archbishop Edward McCarthy HS",
@@ -277,7 +301,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "Archbishop Edward McCarthy HS"
+    "opponent": "Archbishop Edward McCarthy HS",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Volleyball - Girls - JV vs Coral Reef Senior High School",
@@ -299,7 +325,9 @@
     "kind": "booking",
     "team": "Volleyball - Girls - JV",
     "homeAway": "Home",
-    "opponent": "Coral Reef Senior High School"
+    "opponent": "Coral Reef Senior High School",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "Hall of Fame Induction",
@@ -318,7 +346,9 @@
     "resources": [],
     "source": "public",
     "category": "Athletics",
-    "kind": "booking"
+    "kind": "booking",
+    "earlyDismissal": null,
+    "transportation": null
   },
   {
     "name": "34th Annual Westminster Golf Classic",
@@ -337,6 +367,8 @@
     "resources": [],
     "source": "public",
     "category": "Athletics",
-    "kind": "booking"
+    "kind": "booking",
+    "earlyDismissal": null,
+    "transportation": null
   }
 ]

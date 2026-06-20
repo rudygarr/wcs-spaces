@@ -11,6 +11,7 @@ import RoomDetail from './pages/RoomDetail';
 import EventDetail from './pages/EventDetail';
 import People from './pages/People';
 import PersonDetail from './pages/PersonDetail';
+import AthleticsWeek from './pages/AthleticsWeek';
 import './App.css';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/spaces" element={<Spaces />} />
               <Route path="/people" element={<People />} />
               <Route path="/person/:id" element={<PersonDetail />} />
+              <Route path="/athletics" element={<AthleticsWeek />} />
               <Route path="/requests" element={<Requests />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />
