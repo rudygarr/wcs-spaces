@@ -218,16 +218,27 @@ export default function Home() {
             {pendingCount} approvals · {conflicts.length} conflict{conflicts.length === 1 ? '' : 's'}
           </div>
         </button>
-        <div className="widget">
-          <div className="widget-top">
-            <span>School open</span>
-            <span className="dot" style={{ background: 'var(--ok)' }} />
+        {user.site_admin || user.resolves_conflicts || user.department ? (
+          <button className="widget" onClick={() => nav('/insights')}>
+            <div className="widget-top">
+              <span>Insights</span>
+              <i className="ti ti-chart-bar" style={{ color: 'var(--green)', fontSize: 16 }} />
+            </div>
+            <div className="widget-num">{db.events.filter((e) => e.kind !== 'notice').length}</div>
+            <div className="widget-sub">bookings · usage &amp; turnaround →</div>
+          </button>
+        ) : (
+          <div className="widget">
+            <div className="widget-top">
+              <span>School open</span>
+              <span className="dot" style={{ background: 'var(--ok)' }} />
+            </div>
+            <div className="widget-num tnum">
+              7:30<span style={{ fontSize: 17, color: 'var(--text-3)' }}>–4:00</span>
+            </div>
+            <div className="widget-sub">2 guards on duty</div>
           </div>
-          <div className="widget-num tnum">
-            7:30<span style={{ fontSize: 17, color: 'var(--text-3)' }}>–4:00</span>
-          </div>
-          <div className="widget-sub">2 guards on duty</div>
-        </div>
+        )}
       </div>
 
       <div className="statstrip">

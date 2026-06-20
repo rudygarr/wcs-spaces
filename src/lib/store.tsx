@@ -103,7 +103,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return item;
     },
     updateWorkItem(id, patch) {
-      commit((d) => ({ ...d, workItems: d.workItems.map((w) => (w.id === id ? { ...w, ...patch } : w)) }));
+      commit((d) => ({
+        ...d,
+        workItems: d.workItems.map((w) => {
+          if (w.id !== id) return w;
+          const next = { ...w, ...patch };
+          // Stamp the moment a job first reaches Done, for turnaround reporting.
+          if (next.status === 'Done' && !next.completedAt) next.completedAt = new Date().toISOString();
+          return next;
+        }),
+      }));
     },
     addDriver(dr) {
       const driver: Driver = { ...dr, id: uid('drv'), active: true };

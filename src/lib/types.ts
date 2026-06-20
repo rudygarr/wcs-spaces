@@ -113,6 +113,7 @@ export interface WorkItem {
   title: string;
   requestedBy: string;
   createdAt: string;
+  completedAt?: string; // stamped when status first becomes Done — drives turnaround stats
   status: WorkStatus;
   priority: Priority;
   location?: string;
