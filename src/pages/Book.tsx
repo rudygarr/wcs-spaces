@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { dayKey, DEMO_TODAY } from '../lib/data';
 import { field, primaryBtn } from '../components/Modal';
+import { SetupDiagram, setupStyles } from '../components/SetupDiagram';
 
 export default function Book() {
   const nav = useNavigate();
@@ -17,6 +18,7 @@ export default function Book() {
   const [end, setEnd] = useState('10:00');
   const [rooms, setRooms] = useState<string[]>([]);
   const [resources, setResources] = useState<string[]>([]);
+  const [setupStyle, setSetupStyle] = useState<string>('');
   const [details, setDetails] = useState('');
   const [done, setDone] = useState<string | null>(null);
 
@@ -46,6 +48,7 @@ export default function Book() {
       details: details.trim() || null,
       rooms,
       resources,
+      setupStyle: setupStyle || undefined,
     });
     setDone(ev.id);
   }
@@ -124,7 +127,27 @@ export default function Book() {
         ))}
       </div>
 
-      <label className="flabel">Notes</label>
+      <label className="flabel">Room setup{setupStyle ? '' : ' (optional)'}</label>
+      <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>
+        Tap the layout the setup crew should build — the picture goes on the work order, no guesswork.
+      </div>
+      <div className="setup-grid">
+        {setupStyles.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={'setup-card' + (setupStyle === s.id ? ' sel' : '')}
+            onClick={() => setSetupStyle(setupStyle === s.id ? '' : s.id)}
+          >
+            <span className="sd-frame">
+              <SetupDiagram id={s.id} />
+            </span>
+            <span className="setup-name">{s.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <label className="flabel" style={{ marginTop: 18 }}>Notes</label>
       <textarea
         style={{ ...field, height: 76, padding: '10px 12px', resize: 'vertical' }}
         value={details}

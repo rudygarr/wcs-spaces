@@ -32,6 +32,8 @@ export interface WcsEvent {
   // bus/van departure time + driver (or vehicle), or null when none.
   earlyDismissal?: string | null;
   transportation?: string | null;
+  // Visual room-setup template id (see SetupDiagram) — the layout the crew builds.
+  setupStyle?: string;
 }
 
 export interface Assignment {

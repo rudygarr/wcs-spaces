@@ -8,7 +8,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person } from './types';
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
@@ -78,7 +78,29 @@ const notices: EventRec[] = [
     rooms: ['The Lighthouse PAC - Main'],
     resources: ['Sound', 'Lighting'],
     category: 'Community',
+    setupStyle: 'theater',
     assignments: [{ role: 'AV Support', person: 'Rudy Garrido', status: 'Approved' }],
+  },
+  {
+    ...base,
+    id: 'n-4',
+    name: 'Varsity Soccer — Senior Night Team Meal',
+    kind: 'booking',
+    audience: 'Soccer - Boys - Varsity',
+    all_day: false,
+    starts_at: '2026-08-21T18:00:00-04:00',
+    ends_at: '2026-08-21T20:00:00-04:00',
+    location: 'Beacon Hall',
+    owner: 'Athletics',
+    details: 'Pre-season team dinner. 6 banquet rounds, seating ~48. Boosters cater.',
+    rooms: ['Beacon Hall'],
+    resources: ['Table (round)', 'Chairs'],
+    category: 'Athletics',
+    setupStyle: 'banquet',
+    assignments: [
+      { role: 'Setup crew', person: 'Maintenance', status: 'Approved' },
+      { role: 'Catering', person: 'Booster Club', status: 'Approved' },
+    ],
   },
   {
     ...base,

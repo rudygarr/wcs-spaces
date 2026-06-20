@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtTime, fmtDateLong, statusColor, findConflicts } from '../lib/data';
+import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -140,6 +141,27 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {ev.setupStyle && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Room setup</span>
+          </div>
+          <div className="list" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span className="sd-frame" style={{ width: 116, flexShrink: 0, background: 'var(--surface-2)', borderRadius: 9, padding: 8 }}>
+              <SetupDiagram id={ev.setupStyle} />
+            </span>
+            <span>
+              <span style={{ display: 'block', fontSize: 16, fontWeight: 600, color: 'var(--text-1)' }}>
+                {setupStyleName(ev.setupStyle) ?? 'Custom setup'}
+              </span>
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>
+                Build this layout — tap to confirm with the requester if unclear.
+              </span>
+            </span>
+          </div>
+        </>
+      )}
 
       {(ev.assignments?.length ?? 0) > 0 && (
         <>
