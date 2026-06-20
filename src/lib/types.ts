@@ -58,6 +58,10 @@ export interface Resource {
 
 export interface PersonRec extends Person {
   id: string;
+  // App state (not core identity): deactivated users are hidden from pickers
+  // but keep their history. `following` = person ids whose calendar this user follows.
+  active?: boolean;
+  following?: string[];
 }
 
 export interface EventRec extends WcsEvent {

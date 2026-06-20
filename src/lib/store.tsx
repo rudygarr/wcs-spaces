@@ -12,8 +12,10 @@ interface StoreCtx {
   addRoom: (name: string, folder: string) => Room;
   addResource: (name: string, folder: string) => Resource;
   addPerson: (p: Omit<PersonRec, 'id'>) => PersonRec;
+  updatePerson: (id: string, patch: Partial<PersonRec>) => void;
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
   updateEvent: (id: string, patch: Partial<EventRec>) => void;
+  reassignOwner: (fromName: string, toName: string) => void;
   reset: () => void;
 }
 
@@ -54,6 +56,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       commit({ ...db, people: [...db.people, person] });
       return person;
     },
+    updatePerson(id, patch) {
+      commit({ ...db, people: db.people.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+    },
     addEvent(e) {
       const ev: EventRec = { ...e, id: uid('e') };
       commit({ ...db, events: [...db.events, ev] });
@@ -61,6 +66,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     updateEvent(id, patch) {
       commit({ ...db, events: db.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
+    },
+    reassignOwner(fromName, toName) {
+      commit({
+        ...db,
+        events: db.events.map((e) => (e.owner === fromName ? { ...e, owner: toName } : e)),
+      });
     },
     reset() {
       void clearDB();

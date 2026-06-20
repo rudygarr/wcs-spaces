@@ -670,3 +670,80 @@
   padding: 0;
   margin-bottom: 8px;
 }
+
+/* ---- People / access surface ---- */
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 0.5px solid var(--border-2);
+  border-radius: 12px;
+  padding: 0 12px;
+}
+.search-wrap i {
+  color: var(--text-3);
+  font-size: 17px;
+}
+.search {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 10px 2px;
+  font-size: 15px;
+  color: var(--text-1);
+}
+.section-h {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  margin: 0 4px 8px;
+}
+.card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+.perm-row:last-child {
+  border-bottom: none;
+}
+.perm-label {
+  font-size: 15px;
+  color: var(--text-1);
+}
+.perm-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+.perm-select {
+  background: var(--surface-2);
+  border: 0.5px solid var(--border-2);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 14px;
+  color: var(--text-1);
+}
+.lock-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 0 4px 10px;
+}
+.btn-soft.danger {
+  color: var(--danger, #c0392b);
+  border-color: color-mix(in srgb, var(--danger, #c0392b) 35%, transparent);
+}

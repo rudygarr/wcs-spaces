@@ -2,60 +2,18 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession, initials, roleLabel } from '../lib/session';
-import Modal, { field, primaryBtn } from './Modal';
+import { levelOf } from '../lib/access';
+import AddStaff from './AddStaff';
 import type { ReactNode } from 'react';
-
-function AddStaff({ onClose }: { onClose: () => void }) {
-  const { addPerson } = useStore();
-  const { setUser } = useSession();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [admin, setAdmin] = useState(false);
-  function submit() {
-    if (!name.trim()) return;
-    const p = addPerson({
-      name: name.trim(),
-      email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '.')}@demo.wcsmiami.org`,
-      event: admin ? 'Creator' : 'Viewer',
-      rooms: admin ? 'Editor' : 'Viewer',
-      resources: admin ? 'Editor' : 'Viewer',
-      people: admin ? 'Editor' : 'Viewer',
-      resolves_conflicts: admin,
-      site_admin: admin,
-    });
-    setUser(p);
-    onClose();
-  }
-  return (
-    <Modal title="Add staff member" onClose={onClose}>
-      <label className="flabel">Full name</label>
-      <input style={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" autoFocus />
-      <label className="flabel">Email</label>
-      <input
-        style={field}
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="optional — auto-generated if blank"
-      />
-      <label className="flabel" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
-        <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} />
-        Administrator (can approve & resolve conflicts)
-      </label>
-      <button style={{ ...primaryBtn, marginTop: 18 }} onClick={submit}>
-        Add staff member
-      </button>
-    </Modal>
-  );
-}
 
 function RoleSwitcher() {
   const { user, setUser } = useSession();
   const { db, reset } = useStore();
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  const sorted = [...db.people].sort((a, b) =>
-    a.site_admin === b.site_admin ? a.name.localeCompare(b.name) : a.site_admin ? -1 : 1,
-  );
+  const sorted = [...db.people]
+    .filter((p) => p.active !== false)
+    .sort((a, b) => (a.site_admin === b.site_admin ? a.name.localeCompare(b.name) : a.site_admin ? -1 : 1));
   return (
     <>
       <button className="userchip" onClick={() => setOpen(true)} aria-label="Switch user">
@@ -112,7 +70,9 @@ function RoleSwitcher() {
           </div>
         </div>
       )}
-      {adding && <AddStaff onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddStaff canMakeAdmin={levelOf(user) === 2} onAdded={setUser} onClose={() => setAdding(false)} />
+      )}
     </>
   );
 }
@@ -121,6 +81,7 @@ const tabs = [
   { to: '/', icon: 'ti-home', label: 'Home' },
   { to: '/calendar', icon: 'ti-calendar', label: 'Calendar' },
   { to: '/spaces', icon: 'ti-building', label: 'Spaces' },
+  { to: '/people', icon: 'ti-users', label: 'People' },
   { to: '/requests', icon: 'ti-inbox', label: 'Requests' },
 ];
 

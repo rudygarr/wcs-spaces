@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, groupByFolder } from '../lib/store';
-import { initials, roleLabel } from '../lib/session';
 import Modal, { field, primaryBtn } from '../components/Modal';
 
-type Tab = 'rooms' | 'resources' | 'people';
+type Tab = 'rooms' | 'resources';
 
 const roomIcons: Record<string, string> = {
   Athletics: 'ti-ball-basketball',
@@ -79,11 +78,7 @@ export default function Spaces() {
   return (
     <>
       <h1 className="page-h">Spaces</h1>
-      <div className="page-sub">
-        {tab === 'people'
-          ? `${db.people.length} staff with access`
-          : `${(tab === 'rooms' ? db.rooms : db.resources).length} bookable ${tab}`}
-      </div>
+      <div className="page-sub">{`${(tab === 'rooms' ? db.rooms : db.resources).length} bookable ${tab}`}</div>
 
       <div className="seg" style={{ marginBottom: 18 }}>
         <button className={tab === 'rooms' ? 'active' : ''} onClick={() => setTab('rooms')}>
@@ -92,43 +87,15 @@ export default function Spaces() {
         <button className={tab === 'resources' ? 'active' : ''} onClick={() => setTab('resources')}>
           Resources
         </button>
-        <button className={tab === 'people' ? 'active' : ''} onClick={() => setTab('people')}>
-          People
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <button className="btn-soft" onClick={() => setAdding(true)}>
+          <i className="ti ti-plus" /> Add {tab === 'rooms' ? 'room' : 'resource'}
         </button>
       </div>
 
-      {tab !== 'people' && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-          <button className="btn-soft" onClick={() => setAdding(true)}>
-            <i className="ti ti-plus" /> Add {tab === 'rooms' ? 'room' : 'resource'}
-          </button>
-        </div>
-      )}
-
-      {tab === 'people' && (
-        <div className="list">
-          {[...db.people]
-            .sort((a, b) => (a.site_admin === b.site_admin ? a.name.localeCompare(b.name) : a.site_admin ? -1 : 1))
-            .map((p, i) => (
-              <div key={p.id}>
-                {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
-                <div className="space-row" style={{ cursor: 'default' }}>
-                  <span className="avatar" style={{ width: 34, height: 34 }}>
-                    {initials(p.name)}
-                  </span>
-                  <span className="nm">{p.name}</span>
-                  <span className="meta">
-                    {roleLabel(p)}
-                    {p.resolves_conflicts ? ' · resolver' : ''}
-                  </span>
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {tab !== 'people' &&
-        (tab === 'rooms' ? roomGroups : resGroups).map((f) => {
+      {(tab === 'rooms' ? roomGroups : resGroups).map((f) => {
           const icons = tab === 'rooms' ? roomIcons : resIcons;
           return (
             <div className="folder" key={f.name}>
@@ -160,7 +127,7 @@ export default function Spaces() {
         })}
       <div style={{ height: 12 }} />
 
-      {adding && tab !== 'people' && (
+      {adding && (
         <AddSpace
           kind={tab}
           folders={(tab === 'rooms' ? roomGroups : resGroups).map((g) => g.name)}
