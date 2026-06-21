@@ -187,6 +187,25 @@ export interface ConflictNote {
   kind: 'note' | 'accept';
 }
 
+// A tracked piece of equipment in the asset registry. Beyond reactive repair,
+// assets carry a preventive-maintenance cadence (pmIntervalDays) so routine
+// service (filter swaps, inspections) is scheduled, not forgotten — the CMMS
+// staple our reactive-only work orders lacked.
+export interface Asset {
+  id: string;
+  code: string; // human asset tag, e.g. WCS-HVAC-014 (the QR/barcode value)
+  name: string;
+  category: 'HVAC' | 'AV' | 'Safety' | 'Kitchen' | 'Athletics' | 'IT' | 'Facilities';
+  location: string; // room or area
+  serial?: string;
+  installedAt?: string; // ISO date
+  pmIntervalDays?: number; // cadence of preventive maintenance; omit = no PM
+  pmTask?: string; // what the routine service is, e.g. "Replace air filter"
+  lastServiceAt?: string; // ISO date of last completed service
+  serviceLog?: { at: string; by: string; note?: string }[];
+  active?: boolean;
+}
+
 export interface Database {
   rooms: Room[];
   resources: Resource[];
@@ -197,6 +216,7 @@ export interface Database {
   templates: Template[];
   notifications: Notif[];
   conflictNotes?: ConflictNote[];
+  assets?: Asset[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

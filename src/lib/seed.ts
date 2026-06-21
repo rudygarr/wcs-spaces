@@ -4,12 +4,13 @@ import rawPublic from '../data/public-events.json';
 import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
+import { seedAssets } from '../data/assets';
 import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 10;
+export const SEED_VERSION = 11;
 
 // Derive starter notifications from the seeded assignments, so each crew
 // member already has a ringing bell when you "view as" them.
@@ -103,6 +104,7 @@ export function buildSeed(): Database {
     templates: seedTemplates,
     notifications: seedNotifs(),
     conflictNotes: seedConflictNotes(),
+    assets: seedAssets,
     seedVersion: SEED_VERSION,
   };
 }

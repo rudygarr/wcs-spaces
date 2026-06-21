@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
+import { DEMO_TODAY } from './data';
 
 function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -26,6 +27,9 @@ interface StoreCtx {
   notify: (n: Omit<Notif, 'id' | 'createdAt' | 'read'>) => void;
   markNotifsReadFor: (name: string) => void;
   addConflictNote: (n: Omit<ConflictNote, 'id' | 'at'>) => void;
+  addAsset: (a: Omit<Asset, 'id'>) => Asset;
+  updateAsset: (id: string, patch: Partial<Asset>) => void;
+  logService: (id: string, by: string, note?: string) => void;
   reset: () => void;
 }
 
@@ -152,6 +156,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addConflictNote(n) {
       const note: ConflictNote = { ...n, id: uid('cn'), at: new Date().toISOString() };
       commit((d) => ({ ...d, conflictNotes: [...(d.conflictNotes ?? []), note] }));
+    },
+    addAsset(a) {
+      const asset: Asset = { ...a, id: uid('as') };
+      commit((d) => ({ ...d, assets: [...(d.assets ?? []), asset] }));
+      return asset;
+    },
+    updateAsset(id, patch) {
+      commit((d) => ({ ...d, assets: (d.assets ?? []).map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+    },
+    logService(id, by, note) {
+      // Stamp at the demo's "today" so logging service clears the PM in-frame.
+      const now = DEMO_TODAY.toISOString();
+      commit((d) => ({
+        ...d,
+        assets: (d.assets ?? []).map((a) =>
+          a.id === id
+            ? { ...a, lastServiceAt: now, serviceLog: [{ at: now, by, note }, ...(a.serviceLog ?? [])] }
+            : a,
+        ),
+      }));
     },
     reset() {
       void clearDB();
