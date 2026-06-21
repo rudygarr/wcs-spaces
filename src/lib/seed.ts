@@ -10,7 +10,76 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 11;
+export const SEED_VERSION = 12;
+
+// How many of each countable resource the school owns. Resources not listed
+// here are services/personnel and aren't stock-tracked. (See lib/stock.)
+const RESOURCE_STOCK: Record<string, number> = {
+  'Chairs': 250,
+  'Student Chairs': 400,
+  'Table (rectangle)': 40,
+  'Table (round)': 30,
+  'Table (cafeteria-style)': 24,
+  'Podium': 4,
+  'Big Fan (Box Fan)': 8,
+  'Tent': 6,
+  'Choral (Rolling) Risers': 4,
+  'Platforms': 12,
+  'Microphone (hand-held)': 8,
+  'Microphone (headset)': 6,
+  'Portable Microphone/Speaker': 6,
+  'Choir Mics': 16,
+  'LED Screen': 2,
+  'Projector Screen': 6,
+  'Projector/Screen': 10,
+  'TV': 15,
+  'Owl Camera': 12,
+  'Band Shell': 1,
+};
+
+// Two big back-to-back events on DEMO_TODAY that together oversubscribe the
+// chair and round-table stock — seeds a live inventory over-allocation so the
+// availability warnings have something to show.
+function seedInventoryDemand(): EventRec[] {
+  const base = {
+    all_day: false,
+    setup_starts: null,
+    teardown_ends: null,
+    recurrence: null,
+    percent_approved: 100,
+    status: 'Approved',
+    source: 'internal' as const,
+    kind: 'booking' as const,
+  };
+  return [
+    {
+      ...base,
+      id: 'e-inv-1',
+      name: 'WCS Fall Open House',
+      owner: 'Sherry Medder',
+      location: 'Beacon Hall',
+      rooms: ['Beacon Hall'],
+      resources: ['Chairs', 'Table (round)', 'Microphone (hand-held)'],
+      resourceQty: { 'Chairs': 200, 'Table (round)': 30, 'Microphone (hand-held)': 2 },
+      starts_at: '2026-08-20T22:00:00.000Z', // 6pm EDT
+      ends_at: '2026-08-21T01:00:00.000Z',
+      details: 'Campus-wide open house for prospective families.',
+    },
+    {
+      ...base,
+      id: 'e-inv-2',
+      name: 'New Family Welcome Reception',
+      owner: 'Lori Sakkab',
+      location: 'ES Courtyard/Field',
+      rooms: ['ES Courtyard/Field'],
+      resources: ['Chairs', 'Table (round)'],
+      resourceQty: { 'Chairs': 120, 'Table (round)': 12 },
+      starts_at: '2026-08-20T15:00:00.000Z', // 11am EDT
+      ends_at: '2026-08-20T17:00:00.000Z',
+      details: 'Reception for newly enrolled families.',
+    },
+  ];
+}
 
 // Derive starter notifications from the seeded assignments, so each crew
 // member already has a ringing bell when you "view as" them.
@@ -79,7 +148,12 @@ export function buildSeed(): Database {
     f.items.map((name, i) => ({ id: `r-${fi}-${i}`, name, folder: f.name })),
   );
   const resources = resourceFolders.flatMap((f, fi) =>
-    f.items.map((name, i) => ({ id: `res-${fi}-${i}`, name, folder: f.name })),
+    f.items.map((name, i) => ({
+      id: `res-${fi}-${i}`,
+      name,
+      folder: f.name,
+      ...(RESOURCE_STOCK[name] !== undefined ? { qty: RESOURCE_STOCK[name] } : {}),
+    })),
   );
   const people: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({
     ...p,
@@ -98,7 +172,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand()],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,

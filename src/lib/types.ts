@@ -37,6 +37,11 @@ export interface WcsEvent {
   // Decisions recorded by space approvers (see lib/approvals). Only stores
   // approvers who have acted; everyone else is implicitly still pending.
   approvals?: ApprovalRec[];
+  // How many of each (countable) resource this event claims — keyed by resource
+  // name. Drives inventory availability (see lib/stock). A resource listed in
+  // `resources` without an entry here is a request of unspecified quantity and
+  // doesn't draw down stock.
+  resourceQty?: Record<string, number>;
 }
 
 export interface ApprovalRec {
@@ -74,6 +79,11 @@ export interface Resource {
   id: string;
   name: string;
   folder: string;
+  // Total units the school owns. Present only for countable physical stock
+  // (chairs, tables, mics, screens); services & personnel leave this undefined
+  // and are treated as not stock-tracked.
+  qty?: number;
+  unit?: string; // e.g. 'chairs', 'units' — for display only
 }
 
 export interface PersonRec extends Person {

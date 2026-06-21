@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useStore, groupByFolder } from '../lib/store';
 import { roomHasConflict, resourceHasConflict } from '../lib/conflicts';
 import { CampusMap } from '../components/CampusMap';
+import { availableOn } from '../lib/stock';
+import { dayKey, DEMO_TODAY } from '../lib/data';
 import Modal, { field, primaryBtn } from '../components/Modal';
+import type { Resource } from '../lib/types';
 
 type Tab = 'rooms' | 'resources';
 
@@ -125,6 +128,10 @@ export default function Spaces() {
                 {f.items.map((item, i) => {
                   const contested =
                     tab === 'rooms' ? roomHasConflict(db, item.name) : resourceHasConflict(db, item.name);
+                  // Today's stock availability for countable resources.
+                  const res = tab === 'resources' ? (item as Resource) : null;
+                  const avail = res && typeof res.qty === 'number' ? availableOn(db, res.name, dayKey(DEMO_TODAY)) : null;
+                  const over = avail !== null && avail < 0;
                   return (
                     <div key={item.id}>
                       {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
@@ -142,7 +149,15 @@ export default function Spaces() {
                           )}
                           {item.name}
                         </span>
-                        <span className="meta">{counts.get(item.name) ? `${counts.get(item.name)} bookings` : '—'}</span>
+                        <span className="meta" style={over ? { color: 'var(--warn)', fontWeight: 600 } : undefined}>
+                          {avail !== null
+                            ? over
+                              ? `over by ${-avail} today`
+                              : `${avail}/${res!.qty} free`
+                            : counts.get(item.name)
+                              ? `${counts.get(item.name)} bookings`
+                              : '—'}
+                        </span>
                         {tab === 'rooms' && <i className="ti ti-chevron-right chev" />}
                       </button>
                     </div>

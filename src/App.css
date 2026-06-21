@@ -1636,3 +1636,29 @@
 .rtile-flag {
   position: absolute; top: 7px; right: 8px; color: var(--warn); font-size: 13px;
 }
+
+/* ---- resource quantity steppers (Book) ---- */
+.qty-block {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: 10px; padding: 4px 0;
+  border: 0.5px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface);
+}
+.qty-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 13px;
+}
+.qty-row + .qty-row { border-top: 0.5px solid var(--border); }
+.qty-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-1); }
+.qty-step {
+  display: inline-flex; align-items: center; gap: 0;
+  border: 0.5px solid var(--border-2); border-radius: 999px;
+  overflow: hidden; background: var(--surface-2);
+}
+.qty-step button {
+  width: 30px; height: 28px; display: grid; place-items: center;
+  background: none; border: none; color: var(--green); font-size: 15px; cursor: pointer;
+}
+.qty-step button:active { background: var(--green-tint); }
+.qty-n { min-width: 30px; text-align: center; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.qty-avail { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 84px; text-align: right; }

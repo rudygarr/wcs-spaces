@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { dayKey, DEMO_TODAY, fmtDateLong } from '../lib/data';
 import { blackoutFor } from '../lib/calendar';
+import { availableOn, resourceByName } from '../lib/stock';
 import { field, primaryBtn } from '../components/Modal';
 import { SetupDiagram, setupStyles } from '../components/SetupDiagram';
 import type { Template } from '../lib/types';
@@ -53,6 +54,8 @@ export default function Book() {
   const [end, setEnd] = useState('10:00');
   const [rooms, setRooms] = useState<string[]>([]);
   const [resources, setResources] = useState<string[]>([]);
+  // How many of each countable resource is requested (keyed by name).
+  const [qtys, setQtys] = useState<Record<string, number>>({});
   const [setupStyle, setSetupStyle] = useState<string>('');
   const [details, setDetails] = useState('');
   const [done, setDone] = useState<string | null>(null);
@@ -89,6 +92,34 @@ export default function Book() {
   function toggle(list: string[], set: (v: string[]) => void, val: string) {
     set(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
   }
+
+  // Selecting a countable resource defaults its requested count to 1; clearing
+  // it drops the count too.
+  function toggleResource(name: string) {
+    const on = resources.includes(name);
+    setResources(on ? resources.filter((x) => x !== name) : [...resources, name]);
+    const r = resourceByName(db, name);
+    if (r && typeof r.qty === 'number') {
+      setQtys((prev) => {
+        const next = { ...prev };
+        if (on) delete next[name];
+        else next[name] = next[name] ?? 1;
+        return next;
+      });
+    }
+  }
+
+  function setQty(name: string, n: number) {
+    setQtys((prev) => ({ ...prev, [name]: Math.max(1, n) }));
+  }
+
+  // Soft over-allocation check (per philosophy: warn, never block).
+  const overdrawn = resources.filter((name) => {
+    const q = qtys[name];
+    if (!q) return false;
+    const avail = availableOn(db, name, date);
+    return avail !== null && q > avail;
+  });
 
   // Tapping a template fills everything in — the requester just picks date/time.
   function applyTemplate(t: Template) {
@@ -134,6 +165,10 @@ export default function Book() {
       details: details.trim() || null,
       rooms,
       resources,
+      // Only carry counts for resources still selected.
+      resourceQty: Object.fromEntries(
+        Object.entries(qtys).filter(([n]) => resources.includes(n)),
+      ),
       setupStyle: setupStyle || undefined,
     };
     const payloads = instances.map((k) => ({
@@ -284,12 +319,63 @@ export default function Book() {
           <button
             key={r.id}
             className={'chip' + (resources.includes(r.name) ? ' on' : '')}
-            onClick={() => toggle(resources, setResources, r.name)}
+            onClick={() => toggleResource(r.name)}
           >
             {r.name}
           </button>
         ))}
       </div>
+
+      {/* Quantity + live availability for each selected countable resource. */}
+      {resources.some((n) => typeof resourceByName(db, n)?.qty === 'number') && (
+        <div className="qty-block">
+          {resources
+            .map((n) => resourceByName(db, n))
+            .filter((r): r is NonNullable<typeof r> => !!r && typeof r.qty === 'number')
+            .map((r) => {
+              const q = qtys[r.name] ?? 1;
+              const avail = availableOn(db, r.name, date);
+              const short = avail !== null && q > avail;
+              return (
+                <div key={r.id} className="qty-row">
+                  <span className="qty-name">{r.name}</span>
+                  <div className="qty-step">
+                    <button type="button" onClick={() => setQty(r.name, q - 1)} aria-label="less">
+                      <i className="ti ti-minus" />
+                    </button>
+                    <span className="qty-n">{q}</span>
+                    <button type="button" onClick={() => setQty(r.name, q + 1)} aria-label="more">
+                      <i className="ti ti-plus" />
+                    </button>
+                  </div>
+                  <span className="qty-avail" style={{ color: short ? 'var(--warn)' : 'var(--text-3)' }}>
+                    {short ? (
+                      <>
+                        <i className="ti ti-alert-triangle" style={{ fontSize: 12, marginRight: 3 }} />
+                        {avail !== null && avail <= 0 ? `0 of ${r.qty} free` : `only ${avail} of ${r.qty} free`}
+                      </>
+                    ) : (
+                      `${avail} of ${r.qty} free`
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {overdrawn.length > 0 && (
+        <div className="ins-card" style={{ borderColor: 'var(--warn)', background: 'var(--warn-tint)', padding: '11px 13px', margin: '10px 0 2px' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--warn)', fontWeight: 600, fontSize: 14 }}>
+            <i className="ti ti-alert-triangle" />
+            Over-allocated for {fmtDateLong(new Date(date + 'T12:00'))}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 5 }}>
+            More {overdrawn.length === 1 ? overdrawn[0] : overdrawn.join(', ')} requested than is free that day. You can
+            still book — just coordinate with whoever else holds them.
+          </div>
+        </div>
+      )}
 
       <label className="flabel">Room setup{setupStyle ? '' : ' (optional)'}</label>
       <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>

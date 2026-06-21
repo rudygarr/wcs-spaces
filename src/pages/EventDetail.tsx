@@ -147,7 +147,12 @@ export default function EventDetail() {
         {ev.resources.length > 0 && (
           <div className="detail-meta">
             <i className="ti ti-plug-connected" />
-            {ev.resources.join(', ')}
+            {ev.resources
+              .map((r) => {
+                const q = ev.resourceQty?.[r];
+                return q ? `${r} ×${q}` : r;
+              })
+              .join(', ')}
           </div>
         )}
         {ev.team && (
