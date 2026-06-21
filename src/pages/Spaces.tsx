@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, groupByFolder } from '../lib/store';
 import { roomHasConflict, resourceHasConflict } from '../lib/conflicts';
+import { CampusMap } from '../components/CampusMap';
 import Modal, { field, primaryBtn } from '../components/Modal';
 
 type Tab = 'rooms' | 'resources';
@@ -62,6 +63,7 @@ export default function Spaces() {
   const nav = useNavigate();
   const { db } = useStore();
   const [tab, setTab] = useState<Tab>('rooms');
+  const [roomView, setRoomView] = useState<'list' | 'map'>('list');
   const [adding, setAdding] = useState(false);
 
   const counts = useMemo(() => {
@@ -90,13 +92,28 @@ export default function Spaces() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        {tab === 'rooms' ? (
+          <div className="seg seg-sm" style={{ width: 156 }}>
+            <button className={roomView === 'list' ? 'active' : ''} onClick={() => setRoomView('list')}>
+              <i className="ti ti-list" /> List
+            </button>
+            <button className={roomView === 'map' ? 'active' : ''} onClick={() => setRoomView('map')}>
+              <i className="ti ti-map-2" /> Map
+            </button>
+          </div>
+        ) : (
+          <span />
+        )}
         <button className="btn-soft" onClick={() => setAdding(true)}>
           <i className="ti ti-plus" /> Add {tab === 'rooms' ? 'room' : 'resource'}
         </button>
       </div>
 
-      {(tab === 'rooms' ? roomGroups : resGroups).map((f) => {
+      {tab === 'rooms' && roomView === 'map' && <CampusMap />}
+
+      {!(tab === 'rooms' && roomView === 'map') &&
+        (tab === 'rooms' ? roomGroups : resGroups).map((f) => {
           const icons = tab === 'rooms' ? roomIcons : resIcons;
           return (
             <div className="folder" key={f.name}>
