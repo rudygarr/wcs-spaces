@@ -42,6 +42,8 @@ export interface WcsEvent {
   // `resources` without an entry here is a request of unspecified quantity and
   // doesn't draw down stock.
   resourceQty?: Record<string, number>;
+  // Expected headcount — checked against room capacity at booking time (soft).
+  expectedAttendance?: number;
 }
 
 export interface ApprovalRec {
@@ -73,6 +75,7 @@ export interface Room {
   id: string;
   name: string;
   folder: string;
+  capacity?: number; // max occupancy; absent = uncapped / not tracked
 }
 
 export interface Resource {

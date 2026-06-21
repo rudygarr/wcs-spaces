@@ -132,6 +132,7 @@ export default function Spaces() {
                   const res = tab === 'resources' ? (item as Resource) : null;
                   const avail = res && typeof res.qty === 'number' ? availableOn(db, res.name, dayKey(DEMO_TODAY)) : null;
                   const over = avail !== null && avail < 0;
+                  const cap = tab === 'rooms' ? (item as { capacity?: number }).capacity : undefined;
                   return (
                     <div key={item.id}>
                       {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
@@ -154,9 +155,11 @@ export default function Spaces() {
                             ? over
                               ? `over by ${-avail} today`
                               : `${avail}/${res!.qty} free`
-                            : counts.get(item.name)
-                              ? `${counts.get(item.name)} bookings`
-                              : '—'}
+                            : cap
+                              ? `seats ${cap}`
+                              : counts.get(item.name)
+                                ? `${counts.get(item.name)} bookings`
+                                : '—'}
                         </span>
                         {tab === 'rooms' && <i className="ti ti-chevron-right chev" />}
                       </button>

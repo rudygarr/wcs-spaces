@@ -34,7 +34,16 @@ export default function RoomDetail() {
       <h1 className="page-h" style={{ marginTop: 6 }}>
         {room.name}
       </h1>
-      <div className="page-sub">{room.folder}</div>
+      <div className="page-sub">
+        {room.folder}
+        {typeof room.capacity === 'number' && (
+          <>
+            {' · '}
+            <i className="ti ti-users" style={{ fontSize: 13, margin: '0 3px 0 1px' }} />
+            seats {room.capacity}
+          </>
+        )}
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '14px 0' }}>
         <button className="fab" onClick={() => nav('/book')}>

@@ -144,7 +144,9 @@ export function allConflicts(db: Database): ConflictItem[] {
       id: 'rc-' + key,
       kind: 'room',
       title: c.a.name,
-      detail: `${c.room} — overlaps "${c.b.name}"`,
+      detail: c.buffer
+        ? `${c.room} — setup/teardown overlaps "${c.b.name}"`
+        : `${c.room} — overlaps "${c.b.name}"`,
       link: '/event/' + c.a.id,
     });
   }

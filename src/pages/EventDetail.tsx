@@ -38,7 +38,7 @@ export default function EventDetail() {
     .map((c) => {
       const other: EventRec = c.a.id === ev.id ? c.b : c.a;
       const key = conflictKey(c.a.id, c.b.id);
-      return { other, room: c.room, key, resolved: isConflictResolved(db, key) };
+      return { other, room: c.room, key, buffer: !!c.buffer, resolved: isConflictResolved(db, key) };
     });
   const conflicted = conflictPairs.some((p) => !p.resolved);
 
@@ -122,7 +122,7 @@ export default function EventDetail() {
             <span className="act">{conflictPairs.filter((p) => !p.resolved).length} open</span>
           </div>
           {conflictPairs.map((p) => (
-            <ConflictThread key={p.key} conflictKey={p.key} other={p.other} room={p.room} resolved={p.resolved} />
+            <ConflictThread key={p.key} conflictKey={p.key} other={p.other} room={p.room} resolved={p.resolved} buffer={p.buffer} />
           ))}
         </>
       )}
@@ -140,6 +140,20 @@ export default function EventDetail() {
           <i className="ti ti-clock" />
           {ev.all_day ? 'All day' : `${fmtTime(ev.starts_at)} – ${fmtTime(ev.ends_at)}`}
         </div>
+        {(ev.setup_starts || ev.teardown_ends) && (
+          <div className="detail-meta">
+            <i className="ti ti-clock-pause" />
+            Room held {ev.setup_starts ? `from ${fmtTime(ev.setup_starts)}` : ''}
+            {ev.setup_starts && ev.teardown_ends ? ' ' : ''}
+            {ev.teardown_ends ? `until ${fmtTime(ev.teardown_ends)}` : ''} (setup/teardown)
+          </div>
+        )}
+        {typeof ev.expectedAttendance === 'number' && (
+          <div className="detail-meta">
+            <i className="ti ti-users" />
+            {ev.expectedAttendance} expected
+          </div>
+        )}
         <div className="detail-meta">
           <i className={'ti ' + (ev.kind === 'notice' ? 'ti-map-pin' : 'ti-door')} />
           {ev.rooms.join(', ') || ev.location || (ev.kind === 'notice' ? 'No campus space needed' : 'No room assigned')}

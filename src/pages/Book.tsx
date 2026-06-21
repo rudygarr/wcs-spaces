@@ -42,6 +42,26 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
+const BUFFER_OPTS = [0, 15, 30, 45, 60, 90, 120];
+function BufferSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <select
+        style={{ ...field, appearance: 'none', paddingRight: 30 }}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      >
+        {BUFFER_OPTS.map((m) => (
+          <option key={m} value={m}>
+            {m === 0 ? 'None' : `${m} min`}
+          </option>
+        ))}
+      </select>
+      <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 11, top: 13, color: 'var(--text-3)', pointerEvents: 'none' }} />
+    </div>
+  );
+}
+
 export default function Book() {
   const nav = useNavigate();
   const { db, addEvent, addEvents, addTemplate, removeTemplate } = useStore();
@@ -63,6 +83,10 @@ export default function Book() {
   const [activeTpl, setActiveTpl] = useState<string>('');
   const [repeat, setRepeat] = useState<'none' | 'weekly' | 'biweekly'>('none');
   const [until, setUntil] = useState(addDaysKey(date, 56));
+  // Setup/teardown buffers (minutes) reserve the room before/after the event.
+  const [setupMin, setSetupMin] = useState(0);
+  const [teardownMin, setTeardownMin] = useState(0);
+  const [attendance, setAttendance] = useState('');
 
   const isAdmin = user.site_admin;
   const templates = db.templates.filter((t) => t.door === 'book');
@@ -121,6 +145,15 @@ export default function Book() {
     return avail !== null && q > avail;
   });
 
+  // Capacity check: selected rooms whose capacity is below expected attendance.
+  const headcount = parseInt(attendance, 10);
+  const tooSmall =
+    Number.isFinite(headcount) && headcount > 0
+      ? rooms
+          .map((n) => db.rooms.find((r) => r.name === n))
+          .filter((r): r is NonNullable<typeof r> => !!r && typeof r.capacity === 'number' && headcount > r.capacity!)
+      : [];
+
   // Tapping a template fills everything in — the requester just picks date/time.
   function applyTemplate(t: Template) {
     if (activeTpl === t.id) {
@@ -170,12 +203,20 @@ export default function Book() {
         Object.entries(qtys).filter(([n]) => resources.includes(n)),
       ),
       setupStyle: setupStyle || undefined,
+      expectedAttendance: Number.isFinite(headcount) && headcount > 0 ? headcount : undefined,
     };
-    const payloads = instances.map((k) => ({
-      ...base,
-      starts_at: new Date(`${k}T${start}`).toISOString(),
-      ends_at: new Date(`${k}T${end}`).toISOString(),
-    }));
+    const payloads = instances.map((k) => {
+      const s = new Date(`${k}T${start}`);
+      const e = new Date(`${k}T${end}`);
+      return {
+        ...base,
+        starts_at: s.toISOString(),
+        ends_at: e.toISOString(),
+        // Buffers reserve the room before/after; they feed conflict detection.
+        setup_starts: setupMin > 0 ? new Date(s.getTime() - setupMin * 60000).toISOString() : null,
+        teardown_ends: teardownMin > 0 ? new Date(e.getTime() + teardownMin * 60000).toISOString() : null,
+      };
+    });
     const created = payloads.length === 1 ? [addEvent(payloads[0])] : addEvents(payloads);
     setDoneCount(created.length);
     setDone(created[0].id);
@@ -266,6 +307,25 @@ export default function Book() {
         </div>
       </div>
 
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <label className="flabel">Setup buffer</label>
+          <BufferSelect value={setupMin} onChange={setSetupMin} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label className="flabel">Teardown buffer</label>
+          <BufferSelect value={teardownMin} onChange={setTeardownMin} />
+        </div>
+      </div>
+      {(setupMin > 0 || teardownMin > 0) && (
+        <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '-2px 0 4px' }}>
+          <i className="ti ti-clock-pause" style={{ marginRight: 5 }} />
+          Room held {setupMin > 0 ? `${setupMin}m before` : ''}
+          {setupMin > 0 && teardownMin > 0 ? ' and ' : ''}
+          {teardownMin > 0 ? `${teardownMin}m after` : ''} — counts toward conflicts.
+        </div>
+      )}
+
       <label className="flabel">Repeats</label>
       <div className="seg seg-sm" style={{ marginBottom: repeat === 'none' ? 0 : 12 }}>
         <button className={repeat === 'none' ? 'active' : ''} onClick={() => setRepeat('none')}>
@@ -312,6 +372,38 @@ export default function Book() {
           </button>
         ))}
       </div>
+
+      <label className="flabel">Expected attendance (optional)</label>
+      <input
+        style={field}
+        type="number"
+        min={1}
+        inputMode="numeric"
+        value={attendance}
+        onChange={(e) => setAttendance(e.target.value)}
+        placeholder="How many people?"
+      />
+      {rooms.some((n) => typeof db.rooms.find((r) => r.name === n)?.capacity === 'number') &&
+        tooSmall.length === 0 &&
+        Number.isFinite(headcount) &&
+        headcount > 0 && (
+          <div style={{ fontSize: 12.5, color: 'var(--ok)', margin: '-2px 0 4px' }}>
+            <i className="ti ti-users-group" style={{ marginRight: 5 }} />
+            Fits in {rooms.length === 1 ? 'the room' : 'all selected rooms'}.
+          </div>
+        )}
+      {tooSmall.length > 0 && (
+        <div className="ins-card" style={{ borderColor: 'var(--warn)', background: 'var(--warn-tint)', padding: '11px 13px', margin: '6px 0 2px' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--warn)', fontWeight: 600, fontSize: 14 }}>
+            <i className="ti ti-alert-triangle" />
+            Over capacity
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 5 }}>
+            {headcount} expected, but {tooSmall.map((r) => `${r.name} seats ${r.capacity}`).join(', ')}. You can still
+            book — just confirming the space works.
+          </div>
+        </div>
+      )}
 
       <label className="flabel">Resources{resources.length > 0 ? ` · ${resources.length} selected` : ''}</label>
       <div className="chips">

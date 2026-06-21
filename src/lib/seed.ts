@@ -10,7 +10,29 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 12;
+export const SEED_VERSION = 13;
+
+// Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
+const ROOM_CAPACITY: Record<string, number> = {
+  'Lighthouse Theater': 450,
+  'The Lighthouse Studio': 60,
+  'Green Room': 20,
+  'White Room': 20,
+  'Art Gallery': 80,
+  'Theatre class room': 30,
+  'Band Room': 60,
+  'Beacon Hall': 300,
+  'Rehearsal Studio (Orchestra Classroom)': 50,
+  'B 202 Choir Classroom': 40,
+  'B 201 Dance Classroom': 30,
+  'TIDE Conference Room': 16,
+  'MS Conference Room': 14,
+  'Gym': 1200,
+  'SAC': 600,
+  'ES Gym': 300,
+  'NC101 Classroom': 28,
+  'NC102 Classroom': 28,
+};
 
 // How many of each countable resource the school owns. Resources not listed
 // here are services/personnel and aren't stock-tracked. (See lib/stock.)
@@ -77,6 +99,37 @@ function seedInventoryDemand(): EventRec[] {
       starts_at: '2026-08-20T15:00:00.000Z', // 11am EDT
       ends_at: '2026-08-20T17:00:00.000Z',
       details: 'Reception for newly enrolled families.',
+    },
+    // Buffer-only clash in the Gym on DEMO_TODAY: practice ends 10:00 but tears
+    // down till 10:30, while PE setup starts 10:15 — the events don't overlap,
+    // but the room can't be flipped in time.
+    {
+      ...base,
+      id: 'e-buf-1',
+      name: 'JV Volleyball Practice',
+      owner: 'Adriana Marrero',
+      location: 'Gym',
+      rooms: ['Gym'],
+      resources: [],
+      setup_starts: null,
+      teardown_ends: '2026-08-20T14:30:00.000Z', // 10:30 EDT
+      starts_at: '2026-08-20T12:00:00.000Z', // 8:00 EDT
+      ends_at: '2026-08-20T14:00:00.000Z', // 10:00 EDT
+      details: 'Tear-down of nets & standards runs ~30 min past practice.',
+    },
+    {
+      ...base,
+      id: 'e-buf-2',
+      name: 'MS PE Class',
+      owner: 'Adriana Marrero',
+      location: 'Gym',
+      rooms: ['Gym'],
+      resources: [],
+      setup_starts: '2026-08-20T14:15:00.000Z', // 10:15 EDT
+      teardown_ends: null,
+      starts_at: '2026-08-20T14:30:00.000Z', // 10:30 EDT
+      ends_at: '2026-08-20T16:00:00.000Z', // 12:00 EDT
+      details: 'Needs the floor set before students arrive.',
     },
   ];
 }
@@ -145,7 +198,12 @@ function seedConflictNotes(): ConflictNote[] {
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
   const rooms = roomFolders.flatMap((f, fi) =>
-    f.items.map((name, i) => ({ id: `r-${fi}-${i}`, name, folder: f.name })),
+    f.items.map((name, i) => ({
+      id: `r-${fi}-${i}`,
+      name,
+      folder: f.name,
+      ...(ROOM_CAPACITY[name] !== undefined ? { capacity: ROOM_CAPACITY[name] } : {}),
+    })),
   );
   const resources = resourceFolders.flatMap((f, fi) =>
     f.items.map((name, i) => ({

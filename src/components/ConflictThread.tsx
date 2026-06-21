@@ -18,11 +18,13 @@ export function ConflictThread({
   other,
   room,
   resolved,
+  buffer,
 }: {
   conflictKey: string;
   other: EventRec;
   room: string;
   resolved: boolean;
+  buffer?: boolean;
 }) {
   const { db, addConflictNote } = useStore();
   const { user } = useSession();
@@ -44,7 +46,7 @@ export function ConflictThread({
       <div className="ct-head">
         <span className="ct-room">{room}</span>
         <span className="ct-other">
-          overlaps <b>{other.name}</b>
+          {buffer ? 'setup/teardown overlaps' : 'overlaps'} <b>{other.name}</b>
           {other.owner ? ` · ${other.owner}` : ''}
           {other.starts_at ? ` · ${fmtTime(other.starts_at)}` : ''}
         </span>

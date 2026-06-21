@@ -95,12 +95,30 @@ export interface Conflict {
   room: string;
   a: EventRec;
   b: EventRec;
+  // true when only the setup/teardown buffers overlap — the events themselves
+  // don't share the room, but the crew can't flip it fast enough. Softer than a
+  // straight double-booking.
+  buffer?: boolean;
 }
 
-// Two events conflict if they share a room and their time ranges overlap.
-// We skip noise that isn't a real double-booking: parenthetical annotations
-// like "(Music bleed into Beacon Hall…)", and the same event showing up twice
-// across the internal + public calendar feeds (identical name & start).
+// The window a room is actually tied up: from setup (if any) through teardown
+// (if any), falling back to the event's own start/end.
+export function occupancyWindow(e: EventRec): { start: number; end: number } {
+  const start = new Date(e.setup_starts || e.starts_at!).getTime();
+  const end = new Date(e.teardown_ends || e.ends_at || e.starts_at!).getTime();
+  return { start, end };
+}
+
+function overlaps(aS: number, aE: number, bS: number, bE: number): boolean {
+  return bS < aE && aS < bE;
+}
+
+// Two events conflict if they share a room and their occupancy windows overlap.
+// The window includes setup & teardown buffers, so a room counted "free" during
+// another booking's teardown is now caught. We skip noise that isn't a real
+// double-booking: parenthetical annotations like "(Music bleed into Beacon
+// Hall…)", and the same event showing up twice across the internal + public
+// calendar feeds (identical name & start).
 export function findConflicts(list: EventRec[]): Conflict[] {
   const out: Conflict[] = [];
   const byRoom = new Map<string, EventRec[]>();
@@ -116,15 +134,22 @@ export function findConflicts(list: EventRec[]): Conflict[] {
     }
   }
   for (const [room, evs] of byRoom) {
-    evs.sort((a, b) => (a.starts_at! < b.starts_at! ? -1 : 1));
+    // Sort by occupancy start so the early-out break stays valid.
+    evs.sort((a, b) => occupancyWindow(a).start - occupancyWindow(b).start);
     for (let i = 0; i < evs.length; i++) {
+      const aWin = occupancyWindow(evs[i]);
       for (let j = i + 1; j < evs.length; j++) {
-        const aEnd = new Date(evs[i].ends_at || evs[i].starts_at!).getTime();
-        const bStart = new Date(evs[j].starts_at!).getTime();
-        if (bStart >= aEnd) break;
+        const bWin = occupancyWindow(evs[j]);
+        if (bWin.start >= aWin.end) break;
         // Same booking duplicated across feeds — not a real clash.
         if (evs[i].name === evs[j].name && evs[i].starts_at === evs[j].starts_at) continue;
-        out.push({ room, a: evs[i], b: evs[j] });
+        // Do the core event times overlap, or only the buffers?
+        const aCoreS = new Date(evs[i].starts_at!).getTime();
+        const aCoreE = new Date(evs[i].ends_at || evs[i].starts_at!).getTime();
+        const bCoreS = new Date(evs[j].starts_at!).getTime();
+        const bCoreE = new Date(evs[j].ends_at || evs[j].starts_at!).getTime();
+        const buffer = !overlaps(aCoreS, aCoreE, bCoreS, bCoreE);
+        out.push({ room, a: evs[i], b: evs[j], buffer });
       }
     }
   }
