@@ -9,6 +9,20 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// Recurring-series scope (item S4): just this occurrence, this one and every
+// later one, or the whole run.
+export type SeriesScope = 'one' | 'following' | 'all';
+
+// The ids in a series that a scoped action should touch, anchored at one event.
+function seriesScopeIds(events: EventRec[], seriesId: string, scope: SeriesScope, anchor?: EventRec): string[] {
+  if (scope === 'one') return anchor ? [anchor.id] : [];
+  const inSeries = events.filter((e) => e.seriesId === seriesId);
+  if (scope === 'all') return inSeries.map((e) => e.id);
+  // 'following': this occurrence and every later one (by start time).
+  const from = anchor?.starts_at ?? '';
+  return inSeries.filter((e) => (e.starts_at ?? '') >= from).map((e) => e.id);
+}
+
 // Who the audit trail attributes actions to. Kept in sync with the "view as"
 // session actor (see setAuditActor, called from SessionProvider) so store
 // mutations can stamp the right name without every call site passing it.
@@ -58,6 +72,8 @@ interface StoreCtx {
   withdrawRequest: (kind: 'work' | 'event', id: string, withdrawn: boolean) => void;
   addCalendarView: (v: Omit<CalendarView, 'id'>) => string;
   removeCalendarView: (id: string) => void;
+  updateSeries: (seriesId: string, scope: SeriesScope, anchorId: string, patch: Partial<EventRec>) => number;
+  setSeriesCancelled: (seriesId: string, scope: SeriesScope, anchorId: string, cancelled: boolean) => number;
   reset: () => void;
 }
 
@@ -386,6 +402,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     removeCalendarView(id) {
       commit((d) => ({ ...d, calendarViews: (d.calendarViews ?? []).filter((v) => v.id !== id) }));
+    },
+    // Apply a patch across a recurring series (move room, change details, etc.),
+    // scoped to this / this & following / all. Returns how many were touched.
+    updateSeries(seriesId, scope, anchorId, patch) {
+      let n = 0;
+      commit((d) => {
+        const anchor = d.events.find((e) => e.id === anchorId);
+        const ids = new Set(seriesScopeIds(d.events, seriesId, scope, anchor));
+        n = ids.size;
+        if (!n) return d;
+        const nd = { ...d, events: d.events.map((e) => (ids.has(e.id) ? { ...e, ...patch } : e)) };
+        const moved = Array.isArray(patch.rooms) ? ` → ${(patch.rooms as string[]).join(', ')}` : '';
+        return withAudit(nd, {
+          action: `Updated ${n} event${n === 1 ? '' : 's'} in series`,
+          entityType: 'booking',
+          entityId: anchorId,
+          entityLabel: anchor?.name ?? 'Recurring series',
+          detail: (moved || '').trim() || undefined,
+          link: `#/event/${anchorId}`,
+        });
+      });
+      return n;
+    },
+    // Cancel (or reinstate) part of a series — reversible; cancelled occurrences
+    // free their room/stock and leave the queues but stay visible.
+    setSeriesCancelled(seriesId, scope, anchorId, cancelled) {
+      let n = 0;
+      commit((d) => {
+        const anchor = d.events.find((e) => e.id === anchorId);
+        const ids = new Set(seriesScopeIds(d.events, seriesId, scope, anchor));
+        n = ids.size;
+        if (!n) return d;
+        const nd = { ...d, events: d.events.map((e) => (ids.has(e.id) ? { ...e, cancelled } : e)) };
+        return withAudit(nd, {
+          action: `${cancelled ? 'Cancelled' : 'Reinstated'} ${n} event${n === 1 ? '' : 's'} in series`,
+          entityType: 'booking',
+          entityId: anchorId,
+          entityLabel: anchor?.name ?? 'Recurring series',
+          link: `#/event/${anchorId}`,
+        });
+      });
+      return n;
     },
     reset() {
       void clearDB();

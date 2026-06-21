@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 20;
+export const SEED_VERSION = 21;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -133,6 +133,42 @@ function seedInventoryDemand(): EventRec[] {
       details: 'Needs the floor set before students arrive.',
     },
   ];
+}
+
+// A weekly recurring booking that demos series management (item S4): eight
+// Thursday rehearsals sharing one seriesId, so the whole run can be moved,
+// cancelled, or reinstated together from any occurrence. Starts on DEMO_TODAY.
+function seedSeries(): EventRec[] {
+  const base = {
+    all_day: false,
+    setup_starts: null,
+    teardown_ends: null,
+    percent_approved: 100,
+    status: 'Approved',
+    source: 'internal' as const,
+    kind: 'booking' as const,
+    resources: [],
+    owner: 'Rudy Garrido',
+    location: 'Band Room',
+    rooms: ['Band Room'],
+    recurrence: 'Weekly through Oct 8',
+  };
+  const startUTC = Date.UTC(2026, 7, 20, 19, 30); // Aug 20, 3:30pm EDT
+  const out: EventRec[] = [];
+  for (let i = 0; i < 8; i++) {
+    const s = new Date(startUTC + i * 7 * 86400000);
+    const e = new Date(startUTC + i * 7 * 86400000 + 90 * 60000);
+    out.push({
+      ...base,
+      id: `e-ser-${i + 1}`,
+      seriesId: 'ser-demo-rehearsal',
+      name: 'Worship Team Rehearsal',
+      starts_at: s.toISOString(),
+      ends_at: e.toISOString(),
+      details: 'Weekly student worship band rehearsal.',
+    });
+  }
+  return out;
 }
 
 // Three bookings on DEMO_TODAY (noon EDT) that show the check-in lifecycle:
@@ -438,7 +474,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...rentalsSeed.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...rentalsSeed.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,

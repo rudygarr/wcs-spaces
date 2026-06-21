@@ -19,7 +19,7 @@ export function committedOn(db: Database, name: string, key: string): number {
   let sum = 0;
   for (const e of db.events) {
     if (e.status === 'Declined') continue;
-    if (e.released) continue; // reclaimed no-show frees its stock too
+    if (e.released || e.cancelled) continue; // reclaimed no-show / cancelled frees its stock too
     const q = e.resourceQty?.[name];
     if (!q) continue;
     if (!e.starts_at) continue;

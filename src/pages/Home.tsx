@@ -35,7 +35,7 @@ export default function Home() {
   const shown = view === 'mine' ? mine : today;
   const conflicts = findConflicts(today);
   const liveConflicts = allConflicts(db);
-  const pendingCount = db.events.filter((e) => e.status === 'Pending' && !e.withdrawn).length;
+  const pendingCount = db.events.filter((e) => e.status === 'Pending' && !e.withdrawn && !e.cancelled).length;
   const openWork = (dept: string) => db.workItems.filter((w) => !w.withdrawn && w.department === dept && w.status !== 'Done').length;
   const myTasks = db.workItems.filter((w) => !w.withdrawn && w.status !== 'Done' && assignedToMe(w, user)).length;
   const myOpenReqs =

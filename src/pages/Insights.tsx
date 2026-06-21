@@ -35,7 +35,7 @@ export default function Insights() {
   const m = useMemo(() => {
     const win = rangeWindow(range);
     // Filtered working sets — every metric and every export below respects these.
-    const fEvents = db.events.filter((e) => e.kind !== 'notice' && inWindow(e.starts_at, win));
+    const fEvents = db.events.filter((e) => e.kind !== 'notice' && !e.cancelled && inWindow(e.starts_at, win));
     const fWork = db.workItems.filter((w) => !w.withdrawn && inWindow(w.createdAt, win) && (dept === 'All' || w.department === dept));
     const fRentals = (db.rentals ?? []).filter((r) => inWindow(r.date, win));
 

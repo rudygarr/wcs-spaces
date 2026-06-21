@@ -250,6 +250,7 @@ export default function Calendar() {
         {list.map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
           const notice = e.kind === 'notice';
+          const cancelled = !!e.cancelled;
           const ci = checkinState(e, DEMO_TODAY);
           return (
             <div key={e.id}>
@@ -273,11 +274,13 @@ export default function Calendar() {
                   <span
                     className="title"
                     style={
-                      conflicted
-                        ? { color: 'var(--warn)' }
-                        : ci === 'released'
-                          ? { color: 'var(--text-3)', textDecoration: 'line-through' }
-                          : undefined
+                      cancelled
+                        ? { color: 'var(--text-3)', textDecoration: 'line-through' }
+                        : conflicted
+                          ? { color: 'var(--warn)' }
+                          : ci === 'released'
+                            ? { color: 'var(--text-3)', textDecoration: 'line-through' }
+                            : undefined
                     }
                   >
                     {conflicted && <i className="ti ti-alert-triangle" style={{ fontSize: 14, marginRight: 4 }} />}
@@ -310,39 +313,45 @@ export default function Calendar() {
                 <span
                   className="pill"
                   style={{
-                    background: conflicted
-                      ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
-                      : notice
-                        ? 'color-mix(in srgb, var(--info) 14%, transparent)'
-                        : ci === 'noshow'
-                          ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
-                          : ci === 'in'
-                            ? 'color-mix(in srgb, var(--ok) 16%, transparent)'
-                            : 'var(--surface-2)',
-                    color: conflicted
-                      ? 'var(--warn)'
-                      : notice
-                        ? 'var(--info)'
-                        : ci === 'noshow'
-                          ? 'var(--warn)'
-                          : ci === 'in'
-                            ? 'var(--ok)'
-                            : ci === 'released'
-                              ? 'var(--text-3)'
-                              : statusColor(e.status),
+                    background: cancelled
+                      ? 'color-mix(in srgb, var(--bad) 14%, transparent)'
+                      : conflicted
+                        ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
+                        : notice
+                          ? 'color-mix(in srgb, var(--info) 14%, transparent)'
+                          : ci === 'noshow'
+                            ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
+                            : ci === 'in'
+                              ? 'color-mix(in srgb, var(--ok) 16%, transparent)'
+                              : 'var(--surface-2)',
+                    color: cancelled
+                      ? 'var(--bad)'
+                      : conflicted
+                        ? 'var(--warn)'
+                        : notice
+                          ? 'var(--info)'
+                          : ci === 'noshow'
+                            ? 'var(--warn)'
+                            : ci === 'in'
+                              ? 'var(--ok)'
+                              : ci === 'released'
+                                ? 'var(--text-3)'
+                                : statusColor(e.status),
                   }}
                 >
-                  {conflicted
-                    ? 'Conflict'
-                    : notice
-                      ? 'FYI'
-                      : ci === 'noshow'
-                        ? 'No-show'
-                        : ci === 'in'
-                          ? 'Checked in'
-                          : ci === 'released'
-                            ? 'Released'
-                            : e.status}
+                  {cancelled
+                    ? 'Cancelled'
+                    : conflicted
+                      ? 'Conflict'
+                      : notice
+                        ? 'FYI'
+                        : ci === 'noshow'
+                          ? 'No-show'
+                          : ci === 'in'
+                            ? 'Checked in'
+                            : ci === 'released'
+                              ? 'Released'
+                              : e.status}
                 </span>
               </button>
             </div>

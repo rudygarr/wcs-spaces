@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import type { SeriesScope } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtTime, fmtDateLong, statusColor, findConflicts, DEMO_TODAY } from '../lib/data';
 import { checkinState, NOSHOW_GRACE_MIN } from '../lib/checkin';
@@ -15,7 +17,9 @@ import type { ApprovalRec, EventRec } from '../lib/types';
 export default function EventDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit, withdrawRequest } = useStore();
+  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit, withdrawRequest, updateSeries, setSeriesCancelled } = useStore();
+  const [scope, setScope] = useState<SeriesScope>('all');
+  const [moveTo, setMoveTo] = useState('');
   const { user } = useSession();
   const ev = db.events.find((e) => e.id === id);
 
@@ -56,6 +60,19 @@ export default function EventDetail() {
   // reclaim the slot.
   const ciState = checkinState(ev, DEMO_TODAY);
   const canManageCheckin = isOverride || ev.owner === user.name;
+
+  // Recurring-series management (item S4). When this booking is one occurrence of
+  // a series, the owner/admin can move, cancel, or reinstate the run — scoped to
+  // just this date, this & following, or all of it.
+  const series = ev.seriesId ? db.events.filter((e) => e.seriesId === ev.seriesId) : [];
+  const canManageSeries = isOverride || ev.owner === user.name;
+  const scopeCount =
+    scope === 'one'
+      ? 1
+      : scope === 'all'
+        ? series.length
+        : series.filter((e) => (e.starts_at ?? '') >= (ev.starts_at ?? '')).length;
+  const cancelledCount = series.filter((e) => e.cancelled).length;
 
   function act(decision: 'Approved' | 'Declined') {
     if (!ev) return;
@@ -124,12 +141,24 @@ export default function EventDetail() {
             {ev.homeAway}
           </span>
         )}
-        {conflicted && (
+        {conflicted && !ev.cancelled && (
           <span className="pill" style={{ background: 'color-mix(in srgb, var(--warn) 16%, transparent)', color: 'var(--warn)' }}>
             <i className="ti ti-alert-triangle" /> Double-booked
           </span>
         )}
+        {ev.cancelled && (
+          <span className="pill" style={{ background: 'color-mix(in srgb, var(--bad) 14%, transparent)', color: 'var(--bad)' }}>
+            <i className="ti ti-calendar-x" style={{ fontSize: 13, marginRight: 4 }} /> Cancelled
+          </span>
+        )}
       </div>
+
+      {ev.cancelled && (
+        <div className="banner" style={{ background: 'var(--surface-2)', borderColor: 'transparent', color: 'var(--text-2)', marginTop: 12 }}>
+          <i className="ti ti-calendar-x" style={{ color: 'var(--bad)' }} />
+          <span>This occurrence was cancelled — its room is freed. Reinstate it from the series controls below.</span>
+        </div>
+      )}
 
       {conflictPairs.length > 0 && (
         <>
@@ -143,7 +172,14 @@ export default function EventDetail() {
         </>
       )}
 
-      <h1 className="page-h" style={{ marginTop: 10, color: conflicted ? 'var(--warn)' : undefined }}>
+      <h1
+        className="page-h"
+        style={{
+          marginTop: 10,
+          color: ev.cancelled ? 'var(--text-3)' : conflicted ? 'var(--warn)' : undefined,
+          textDecoration: ev.cancelled ? 'line-through' : undefined,
+        }}
+      >
         {ev.name}
       </h1>
 
@@ -419,6 +455,85 @@ export default function EventDetail() {
                 <i className="ti ti-archive" /> Withdraw request
               </button>
             ))}
+        </>
+      )}
+
+      {/* ---- Recurring-series management (S4) ---- */}
+      {ev.seriesId && series.length > 1 && canManageSeries && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Recurring series</span>
+          </div>
+          <div className="series-card">
+            <div className="series-head">
+              <i className="ti ti-repeat" />
+              <span>
+                {ev.recurrence || 'Repeats'} · {series.length} dates
+                {cancelledCount > 0 ? ` · ${cancelledCount} cancelled` : ''}
+              </span>
+            </div>
+            <div className="series-label">Apply changes to</div>
+            <div className="seg seg-sm">
+              <button className={scope === 'one' ? 'active' : ''} onClick={() => setScope('one')}>
+                This event
+              </button>
+              <button className={scope === 'following' ? 'active' : ''} onClick={() => setScope('following')}>
+                This &amp; following
+              </button>
+              <button className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}>
+                All events
+              </button>
+            </div>
+            <div className="series-scope-note">
+              {scopeCount} event{scopeCount === 1 ? '' : 's'} will change.
+            </div>
+
+            <div className="series-action">
+              <select className="series-select" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
+                <option value="">Move to another room…</option>
+                {[...new Set(db.rooms.map((r) => r.folder))].sort().map((folder) => (
+                  <optgroup key={folder} label={folder}>
+                    {db.rooms
+                      .filter((r) => r.folder === folder)
+                      .map((r) => (
+                        <option key={r.name} value={r.name}>
+                          {r.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+              <button
+                className="btn-soft"
+                disabled={!moveTo}
+                onClick={() => {
+                  const n = updateSeries(ev.seriesId!, scope, ev.id, { rooms: [moveTo] });
+                  setMoveTo('');
+                  alert(`Moved ${n} event${n === 1 ? '' : 's'} to ${moveTo}. Any new clashes show as warnings you can work out.`);
+                }}
+              >
+                <i className="ti ti-arrows-exchange" /> Move
+              </button>
+            </div>
+
+            <div className="series-action">
+              <button
+                className="btn-soft"
+                onClick={() => {
+                  if (confirm(`Cancel ${scopeCount} event${scopeCount === 1 ? '' : 's'} in this series? This frees the rooms and is reversible — you can reinstate anytime.`))
+                    setSeriesCancelled(ev.seriesId!, scope, ev.id, true);
+                }}
+              >
+                <i className="ti ti-calendar-x" /> Cancel {scope === 'one' ? 'this' : scope === 'all' ? 'all' : 'these'}
+              </button>
+              {cancelledCount > 0 && (
+                <button className="btn-soft" onClick={() => setSeriesCancelled(ev.seriesId!, scope, ev.id, false)}>
+                  <i className="ti ti-rotate" /> Reinstate {scope === 'all' ? 'all' : 'these'}
+                </button>
+              )}
+            </div>
+            <div className="series-foot">Soft &amp; reversible — moves and cancels can be undone, and conflicts stay warnings, never blocks.</div>
+          </div>
         </>
       )}
 

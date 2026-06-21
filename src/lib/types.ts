@@ -55,6 +55,12 @@ export interface WcsEvent {
   // to the philosophy) — reinstating clears it. Withdrawn requests drop out of
   // approvers' queues but keep their history.
   withdrawn?: boolean;
+  // Links the occurrences of a recurring booking so the whole run can be moved,
+  // edited, or cancelled together (item S4). Absent on one-off bookings.
+  seriesId?: string;
+  // A cancelled occurrence (reversible) — frees its room/stock and drops out of
+  // approval queues, but stays visible (struck through) so the change is legible.
+  cancelled?: boolean;
 }
 
 export interface ApprovalRec {

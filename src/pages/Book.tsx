@@ -184,12 +184,16 @@ export default function Book() {
 
   function submit() {
     if (!name.trim() || rooms.length === 0) return;
+    // Recurring bookings share a seriesId so the whole run can later be moved /
+    // cancelled together (item S4). One-off bookings get no series.
+    const seriesId = instances.length > 1 ? `ser-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}` : undefined;
     const base = {
       name: name.trim(),
       all_day: false,
       setup_starts: null,
       teardown_ends: null,
       recurrence: recurLabel,
+      seriesId,
       location: rooms[0] ?? null,
       owner: user.name,
       // Admins' own bookings auto-approve; everyone else lands in the queue.

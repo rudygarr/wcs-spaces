@@ -124,8 +124,8 @@ export function findConflicts(list: EventRec[]): Conflict[] {
   const byRoom = new Map<string, EventRec[]>();
   for (const e of list) {
     if (e.all_day || e.status === 'Declined') continue;
-    // A released (reclaimed no-show) booking no longer holds its room.
-    if (e.released) continue;
+    // A released (reclaimed no-show) or cancelled booking no longer holds its room.
+    if (e.released || e.cancelled) continue;
     if (e.name.trim().startsWith('(')) continue;
     // The public master-calendar feed mirrors booked events (often with slightly
     // different names) — it's read-only awareness, not a source of real clashes.
