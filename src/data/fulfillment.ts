@@ -258,7 +258,7 @@ export const seedTemplates: Template[] = [
     id: 'tpl-4',
     door: 'athletics',
     name: 'Varsity Football — Home',
-    needs: ['trainer', 'officials', 'av', 'concessions', 'security'],
+    needs: ['trainer', 'officials', 'av', 'announcer', 'concessions', 'security'],
     details: 'Standard home football game day.',
     builtIn: true,
   },

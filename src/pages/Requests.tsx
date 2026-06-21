@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { allRooms, roomFolders } from '../data/inventory';
-import { teamSeasons } from '../data/teams';
+import { teamSeasons, teamLevel, type TeamLevel } from '../data/teams';
 import { sportOf, sportVenues, athleticFacilities } from '../data/athletic-venues';
 import { useSession } from '../lib/session';
 import { useStore } from '../lib/store';
@@ -98,7 +98,7 @@ const doors: Door[] = [
       {
         kind: 'checks',
         label: 'Needs — routed to each team',
-        options: ['Transportation (away)', 'Early dismissal (away)', 'AV / scoreboard', 'Athletic trainer', 'Game officials', 'Concessions', 'Security'],
+        options: ['Transportation (away)', 'Early dismissal (away)', 'AV / scoreboard', 'Announcer (PA)', 'Athletic trainer', 'Game officials', 'Concessions', 'Security'],
       },
       { kind: 'area', label: 'Notes', placeholder: 'Anything athletics, facilities or security should know' },
     ],
@@ -219,19 +219,28 @@ const NEEDS: Need[] = [
   { key: 'trainer', label: 'Athletic trainer', icon: 'ti-first-aid-kit', hint: 'On-site trainer (the host usually provides one).', placeholder: 'Assign from training staff, or name', openHome: true, openAway: false },
   { key: 'officials', label: 'Game officials / referees', icon: 'ti-whistle', hint: 'Refs/umpires — booked by the home team.', placeholder: 'e.g. 3 officials via county assignor', openHome: true, openAway: false },
   { key: 'av', label: 'AV / scoreboard', icon: 'ti-device-tv', hint: 'Scoreboard, PA, livestream.', placeholder: 'Scoreboard + PA; livestream?', openHome: true, openAway: false },
+  { key: 'announcer', label: 'Announcer (PA)', icon: 'ti-microphone', hint: 'PA announcer to call the game — usual for varsity, optional for JV, rare for middle school.', placeholder: 'Who announces? (booster, staff, student)', openHome: true, openAway: false },
   { key: 'concessions', label: 'Concessions', icon: 'ti-cup', hint: 'Snack bar / booster table.', placeholder: 'Open snack bar; who staffs it?', openHome: true, openAway: false },
   { key: 'security', label: 'Security', icon: 'ti-shield', hint: 'Gate and crowd coverage.', placeholder: '# guards / gate coverage', openHome: true, openAway: false },
 ];
 
-function NeedsAccordion({ homeAway }: { homeAway: string }) {
+// A few needs default-open by competition level, not just home/away. Announcer
+// is typical for varsity, optional for JV, rare for middle school — so it only
+// pre-opens for a varsity home game (still expandable for JV/MS).
+function needOpensByDefault(n: Need, homeAway: string, level: TeamLevel): boolean {
+  const base = homeAway === 'Away' ? n.openAway : n.openHome;
+  if (n.key === 'announcer') return homeAway === 'Home' && level === 'Varsity';
+  return base;
+}
+
+function NeedsAccordion({ homeAway, level }: { homeAway: string; level: TeamLevel }) {
   const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(NEEDS.map((n) => [n.key, false])));
 
-  // Re-seed which needs are expanded whenever Home/Away changes.
+  // Re-seed which needs are expanded whenever Home/Away or team level changes.
   useEffect(() => {
     if (!homeAway) return;
-    const away = homeAway === 'Away';
-    setOpen(Object.fromEntries(NEEDS.map((n) => [n.key, away ? n.openAway : n.openHome])));
-  }, [homeAway]);
+    setOpen(Object.fromEntries(NEEDS.map((n) => [n.key, needOpensByDefault(n, homeAway, level)])));
+  }, [homeAway, level]);
 
   const note = !homeAway
     ? 'Pick Home or Away and we’ll open the needs that usually apply.'
@@ -433,7 +442,7 @@ function AthleticsForm() {
         <input type="text" placeholder="e.g. 2:30 p.m. — when students leave class" style={inputStyle} />
       </Labeled>
 
-      <NeedsAccordion homeAway={homeAway} />
+      <NeedsAccordion homeAway={homeAway} level={teamLevel(team)} />
 
       <Labeled label="Notes">
         <textarea placeholder="Anything athletics, facilities or security should know" rows={3} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical' }} />

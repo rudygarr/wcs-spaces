@@ -94,3 +94,15 @@ export const teamSeasons: TeamSeason[] = [
 ];
 
 export const allTeams: string[] = teamSeasons.flatMap((s) => s.teams);
+
+// Competition level from a team name. Middle School is checked first because
+// some teams read "Middle School Varsity"/"Middle School JV" — those are MS.
+// Freshmen and JV are high-school sub-varsity.
+export type TeamLevel = 'Middle School' | 'JV' | 'Varsity' | '';
+export function teamLevel(team: string): TeamLevel {
+  if (!team) return '';
+  if (/middle school|\bMS\b/i.test(team)) return 'Middle School';
+  if (/varsity/i.test(team)) return 'Varsity';
+  if (/\bJV\b|freshmen/i.test(team)) return 'JV';
+  return '';
+}
