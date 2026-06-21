@@ -3,6 +3,7 @@ import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, T
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
+import { channelsFor } from './notify';
 
 function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -143,8 +144,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     notify(n) {
       if (!n.to) return;
-      const notif: Notif = { ...n, id: uid('n'), createdAt: new Date().toISOString() };
-      commit((d) => ({ ...d, notifications: [...d.notifications, notif] }));
+      commit((d) => {
+        // Deliver on the recipient's chosen channels (in-app always, + email/Teams).
+        const person = d.people.find((p) => p.name === n.to);
+        const notif: Notif = {
+          ...n,
+          id: uid('n'),
+          createdAt: new Date().toISOString(),
+          channels: n.channels ?? channelsFor(person),
+        };
+        return { ...d, notifications: [...d.notifications, notif] };
+      });
     },
     markNotifsReadFor(name) {
       commit((d) =>

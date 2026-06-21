@@ -4,7 +4,10 @@ import { useStore } from '../lib/store';
 import { useSession, initials, roleLabel } from '../lib/session';
 import { levelOf } from '../lib/access';
 import AddStaff from './AddStaff';
+import { DeliveryPreview, NotifSettings } from './NotifExtras';
+import { CHANNEL_META } from '../lib/notify';
 import type { ReactNode } from 'react';
+import type { Notif } from '../lib/types';
 
 function RoleSwitcher() {
   const { user, setUser } = useSession();
@@ -99,6 +102,8 @@ function NotifBell() {
   const { user } = useSession();
   const { db, markNotifsReadFor } = useStore();
   const [open, setOpen] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [preview, setPreview] = useState<Notif | null>(null);
 
   const mine = db.notifications
     .filter((n) => n.to === user.name)
@@ -123,33 +128,62 @@ function NotifBell() {
       {open && (
         <div className="switch-backdrop" onClick={close}>
           <div className="switch-panel notif-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="switch-head">
-              Notifications for {user.name.split(' ')[0]} — in production these also go to email & Teams.
+            <div className="switch-head notif-head">
+              <span>Notifications for {user.name.split(' ')[0]} — these also go to email &amp; Teams.</span>
+              <button
+                className="notif-gear"
+                aria-label="Notification settings"
+                onClick={() => setSettings(true)}
+              >
+                <i className="ti ti-settings" />
+              </button>
             </div>
             {mine.length === 0 && <div className="empty" style={{ margin: 12 }}>You're all caught up.</div>}
-            {mine.map((n) => (
-              <button
-                key={n.id}
-                className={'notif-row' + (n.read ? '' : ' unread')}
-                onClick={() => {
-                  if (n.link) nav(n.link.replace(/^#/, ''));
-                  close();
-                }}
-              >
-                <span className="notif-ic">
-                  <i className={'ti ' + (NOTIF_ICON[n.kind] ?? 'ti-bell')} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span className="notif-title">{n.title}</span>
-                  {n.body && <span className="notif-body">{n.body}</span>}
-                  <span className="notif-time">{timeAgo(n.createdAt)}</span>
-                </span>
-                {!n.read && <span className="notif-dot" />}
-              </button>
-            ))}
+            {mine.map((n) => {
+              const channels = (n.channels ?? ['in-app']).filter((c) => c !== 'in-app');
+              return (
+                <div key={n.id} className={'notif-row' + (n.read ? '' : ' unread')}>
+                  <button
+                    className="notif-main"
+                    onClick={() => {
+                      if (n.link) nav(n.link.replace(/^#/, ''));
+                      close();
+                    }}
+                  >
+                    <span className="notif-ic">
+                      <i className={'ti ' + (NOTIF_ICON[n.kind] ?? 'ti-bell')} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span className="notif-title">{n.title}</span>
+                      {n.body && <span className="notif-body">{n.body}</span>}
+                      <span className="notif-meta">
+                        <span className="notif-time">{timeAgo(n.createdAt)}</span>
+                        {channels.map((c) => (
+                          <span key={c} className="notif-chan">
+                            <i className={'ti ' + CHANNEL_META[c].icon} />
+                          </span>
+                        ))}
+                      </span>
+                    </span>
+                    {!n.read && <span className="notif-dot" />}
+                  </button>
+                  {channels.length > 0 && (
+                    <button
+                      className="notif-preview"
+                      aria-label="Preview delivery"
+                      onClick={() => setPreview(n)}
+                    >
+                      <i className="ti ti-eye" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+      {settings && <NotifSettings onClose={() => setSettings(false)} />}
+      {preview && <DeliveryPreview notif={preview} onClose={() => setPreview(null)} />}
     </>
   );
 }

@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 13;
+export const SEED_VERSION = 14;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -164,7 +164,8 @@ function seedNotifs(): Notif[] {
       }
     });
   }
-  return out;
+  // Seed delivery channels so the bell shows the email/Teams stand-ins live.
+  return out.map((n) => ({ ...n, channels: ['in-app', 'email', 'teams'] as Notif['channels'] }));
 }
 
 // A seeded example of the conflict-as-conversation feature: two owners (Dance

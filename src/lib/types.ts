@@ -99,6 +99,8 @@ export interface PersonRec extends Person {
   // can delegate (Lead) or only act on what they're assigned (Tech).
   department?: Department;
   deptRole?: 'Lead' | 'Tech';
+  // How this person wants to be pinged (see NotifyPrefs). Absent = all channels on.
+  notifyPrefs?: NotifyPrefs;
 }
 
 export interface EventRec extends WcsEvent {
@@ -175,6 +177,11 @@ export interface Template {
 
 // An in-app notification, addressed to a person by name. In production these
 // fan out to email / Teams via the backend; in the demo they ring the bell.
+// Where a notification was delivered. 'in-app' is always on; email & Teams are
+// stand-ins for the M365 channels staff actually live in (computed from the
+// recipient's NotifyPrefs at send time).
+export type NotifChannel = 'in-app' | 'email' | 'teams';
+
 export interface Notif {
   id: string;
   to: string; // person name this is for
@@ -184,6 +191,13 @@ export interface Notif {
   link?: string; // hash route to open when tapped
   createdAt: string;
   read?: boolean;
+  channels?: NotifChannel[]; // where this went; absent = in-app only (legacy)
+}
+
+export interface NotifyPrefs {
+  email: boolean;
+  teams: boolean;
+  digest: 'instant' | 'daily'; // batch into a daily summary vs send right away
 }
 
 // A message in a conflict's conversation. Our differentiator: a double-booking
