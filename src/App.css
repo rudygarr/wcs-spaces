@@ -2288,6 +2288,48 @@
   position: absolute; top: 7px; right: 8px; color: var(--warn); font-size: 13px;
 }
 
+/* ---- Map layers: Work & Assets overlays (S5) ---- */
+.map-layers { width: 100%; margin-bottom: 12px; }
+.map-layers button { display: inline-flex; align-items: center; gap: 5px; }
+.layer-badge {
+  font-size: 11px; font-weight: 700; line-height: 1; padding: 2px 5px;
+  border-radius: 999px; background: var(--green); color: #fff; font-variant-numeric: tabular-nums;
+}
+.seg-sm button.active .layer-badge { background: var(--green); color: #fff; }
+.bldg-cnt {
+  margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.bldg-due {
+  font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+  background: var(--warn-tint); color: var(--warn);
+}
+.pin-list { display: flex; flex-direction: column; }
+.pin {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 11px 13px; background: none; border: none; border-top: 0.5px solid var(--border);
+  text-align: left; cursor: pointer; font: inherit; color: var(--text-1);
+}
+.pin:first-child { border-top: none; }
+.pin:active { background: var(--surface-2); }
+.pin-dot { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+.pin-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pin-title {
+  font-size: 14px; font-weight: 550; line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pin-sub {
+  font-size: 12px; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pin-add {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 9px; background: var(--surface-2); border: none;
+  border-top: 0.5px solid var(--border); color: var(--green);
+  font: inherit; font-size: 13px; font-weight: 550; cursor: pointer;
+}
+.pin-add:active { background: var(--green-tint); }
+
 /* ---- resource quantity steppers (Book) ---- */
 .qty-block {
   display: flex; flex-direction: column; gap: 2px;

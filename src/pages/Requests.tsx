@@ -486,7 +486,7 @@ function readPhoto(file: File): Promise<string> {
 // submit it becomes a WorkItem that drops straight into the department queue.
 // Industry pattern (Brightly Asset Essentials, Incident IQ): the requester
 // never sets priority or assignee; the department triages that side.
-function DeptForm({ door }: { door: Door }) {
+function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: string }) {
   const nav = useNavigate();
   const { addWorkItem } = useStore();
   const { user } = useSession();
@@ -494,7 +494,8 @@ function DeptForm({ door }: { door: Door }) {
   const dept: Department = isIT ? 'IT' : 'Maintenance';
 
   const [category, setCategory] = useState('');
-  const [location, setLocation] = useState('');
+  // Pre-set when arriving from a "Report here" tap on the campus map (S5).
+  const [location, setLocation] = useState(initialLocation ?? '');
   const [area, setArea] = useState('');
   const [room, setRoom] = useState('');
   const [problem, setProblem] = useState('');
@@ -551,9 +552,13 @@ function DeptForm({ door }: { door: Door }) {
         <div style={{ position: 'relative' }}>
           <select value={location} onChange={(e) => setLocation(e.target.value)} style={{ ...inputStyle, appearance: 'none' }}>
             <option value="">Select…</option>
-            {(isIT ? ['Elementary School', 'Middle School', 'High School'] : allRooms).map((o) => (
-              <option key={o}>{o}</option>
-            ))}
+            {(() => {
+              const base = isIT ? ['Elementary School', 'Middle School', 'High School'] : allRooms;
+              // Honor a location handed in from the map ("Report here") even when
+              // it's a building zone rather than a specific room.
+              const opts = location && !base.includes(location) ? [location, ...base] : base;
+              return opts.map((o) => <option key={o}>{o}</option>);
+            })()}
           </select>
           {chevron}
         </div>
@@ -678,7 +683,7 @@ export default function Requests() {
               </button>
             </>
           ) : active.id === 'maintenance' || active.id === 'it' ? (
-            <DeptForm door={active} />
+            <DeptForm door={active} initialLocation={params.get('loc') ?? undefined} />
           ) : (
             <>
               {active.fields.map((f) => <FieldView key={f.label} f={f} />)}
