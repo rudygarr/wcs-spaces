@@ -1491,6 +1491,71 @@
 }
 
 /* Check-in / no-show release card */
+/* ---- Driver hours + auto-rotation (item M) ---- */
+.auto-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--green-tint);
+  color: var(--green);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auto-link.sm {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+.auto-link i {
+  font-size: 14px;
+}
+.drv-hours {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.drv-hours.over {
+  color: var(--warn);
+  font-weight: 600;
+}
+.drv-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.drv-bar {
+  flex: 1;
+  max-width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.drv-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+}
+.drv-fill.over {
+  background: var(--warn);
+}
+.drv-stat {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.drv-stat.over {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 .ci-card {
   display: flex;
   align-items: center;

@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { canDelegate, deptTeam, assignedToMe } from '../lib/fulfill';
 import { legCollision, driverBusyElsewhere } from '../lib/conflicts';
+import { driverLoad, suggestDriver, WEEKLY_SOFT_CAP } from '../lib/drivers';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import { statusTint, priorityColor } from './Queue';
 import type { Priority, TripLeg, WorkItem, WorkStatus } from '../lib/types';
@@ -164,6 +165,33 @@ export default function WorkDetail() {
       notify({ to: patch.driver, kind: 'assigned', title: `You're driving: ${w!.title}`, body: w!.trip.destination ?? undefined, link: `#/work/${w!.id}` });
     }
   }
+  // Fair rotation: pick the lightest available driver for one leg.
+  function autoAssignLeg(leg: TripLeg) {
+    const pick = suggestDriver(db, w!, leg);
+    if (pick && pick.name !== leg.driver) updateLeg(leg.id, { driver: pick.name });
+  }
+  // Fill every empty driver slot fairly. For a round trip we keep one driver on
+  // both legs when they're free — only spread across drivers when needed.
+  function autoAssignTrip() {
+    if (!w!.trip) return;
+    let legs = w!.trip.legs.map((l) => ({ ...l }));
+    let dirty = false;
+    for (const leg of legs) {
+      if (leg.driver) continue;
+      const mate = legs.find((l) => l.id !== leg.id && l.driver);
+      const reuse =
+        mate?.driver && !driverBusyElsewhere(db, w!, mate.driver) && !legs.some((l) => l.driver === mate.driver && l.id !== leg.id && l.id !== mate.id)
+          ? mate.driver
+          : null;
+      const pick = reuse ?? suggestDriver(db, { ...w!, trip: { ...w!.trip, legs } }, leg)?.name;
+      if (pick) {
+        leg.driver = pick;
+        dirty = true;
+        if (pick !== user.name) notify({ to: pick, kind: 'assigned', title: `You're driving: ${w!.title}`, body: w!.trip.destination ?? undefined, link: `#/work/${w!.id}` });
+      }
+    }
+    if (dirty) updateWorkItem(w!.id, { trip: { ...w!.trip, legs } });
+  }
   function saveDriver() {
     const name = newDriver.trim();
     if (!name) return;
@@ -300,6 +328,11 @@ export default function WorkDetail() {
         <>
           <div className="section-label" style={{ marginTop: 22 }}>
             <span className="lbl">Trip — assign a bus &amp; driver per leg</span>
+            {w.trip!.legs.some((l) => !l.driver) && (
+              <button className="auto-link" onClick={autoAssignTrip} title="Assign the fairest available drivers">
+                <i className="ti ti-wand" /> Auto-assign drivers
+              </button>
+            )}
           </div>
           <Field label="Scheduled date">
             <input type="date" style={{ ...fieldStyle, appearance: 'auto' }} value={w.scheduledFor ?? ''} onChange={(e) => updateWorkItem(w.id, { scheduledFor: e.target.value })} />
@@ -328,17 +361,37 @@ export default function WorkDetail() {
                   </Sel>
                 </div>
                 <div style={{ flex: 1.4 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 5 }}>Driver</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Driver</span>
+                    <button className="auto-link sm" onClick={() => autoAssignLeg(leg)} title="Pick the fairest available driver">
+                      <i className="ti ti-wand" /> Auto
+                    </button>
+                  </div>
                   <Sel value={leg.driver ?? ''} onChange={(v) => (v === '__add' ? setAddingDriver(true) : updateLeg(leg.id, { driver: v }))}>
                     <option value="">Pick driver…</option>
-                    {drivers.map((d) => (
-                      <option key={d.id} value={d.name}>
-                        {d.name}
-                        {leg.driver !== d.name && driverBusyElsewhere(db, w, d.name) ? '  — driving elsewhere' : ''}
-                      </option>
-                    ))}
+                    {drivers.map((d) => {
+                      const load = driverLoad(db, d.name);
+                      const busy = leg.driver !== d.name && driverBusyElsewhere(db, w, d.name);
+                      return (
+                        <option key={d.id} value={d.name}>
+                          {d.name} · {load.hours}h
+                          {load.overCap ? ' ⚠ over cap' : ''}
+                          {busy ? ' — driving elsewhere' : ''}
+                        </option>
+                      );
+                    })}
                     <option value="__add">+ Add a driver…</option>
                   </Sel>
+                  {leg.driver && (() => {
+                    const load = driverLoad(db, leg.driver);
+                    return (
+                      <div className={'drv-hours' + (load.overCap ? ' over' : '')}>
+                        <i className={'ti ' + (load.overCap ? 'ti-alert-triangle' : 'ti-clock')} />
+                        {load.hours}h this week · {load.trips} trip{load.trips === 1 ? '' : 's'}
+                        {load.overCap ? ` — over ${WEEKLY_SOFT_CAP}h soft cap` : ''}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <div style={{ marginTop: 10 }}>

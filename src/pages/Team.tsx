@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { canDelegate, deptTeam } from '../lib/fulfill';
+import { driverLoad, WEEKLY_SOFT_CAP } from '../lib/drivers';
 import type { Department, PersonRec } from '../lib/types';
 
 const DEPTS: { id: Department; icon: string; cls: string }[] = [
@@ -151,7 +152,12 @@ function DriverRoster() {
   const { db, addDriver, updateDriver } = useStore();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const drivers = db.drivers.filter((d) => d.active !== false);
+  // Heaviest-loaded first so dispatch sees the imbalance at a glance.
+  const drivers = db.drivers
+    .filter((d) => d.active !== false)
+    .map((d) => ({ d, load: driverLoad(db, d.name) }))
+    .sort((a, b) => b.load.hours - a.load.hours);
+  const maxHours = Math.max(WEEKLY_SOFT_CAP, ...drivers.map((x) => x.load.hours), 1);
 
   function save() {
     if (!name.trim()) return;
@@ -163,11 +169,11 @@ function DriverRoster() {
   return (
     <>
       <div className="section-label" style={{ marginTop: 20 }}>
-        <span className="lbl">Driver roster</span>
+        <span className="lbl">Driver roster · hours this week</span>
         <span className="act">{drivers.length}</span>
       </div>
       <div className="list">
-        {drivers.map((d, i) => (
+        {drivers.map(({ d, load }, i) => (
           <div key={d.id}>
             {i > 0 && <div className="divider" style={{ marginLeft: 16 }} />}
             <div className="row" style={{ cursor: 'default' }}>
@@ -176,6 +182,15 @@ function DriverRoster() {
               </span>
               <span className="body">
                 <span className="title">{d.name}</span>
+                <span className="drv-meter">
+                  <span className="drv-bar">
+                    <span className={'drv-fill' + (load.overCap ? ' over' : '')} style={{ width: Math.min(100, (load.hours / maxHours) * 100) + '%' }} />
+                  </span>
+                  <span className={'drv-stat' + (load.overCap ? ' over' : '')}>
+                    {load.hours}h · {load.trips} trip{load.trips === 1 ? '' : 's'}
+                    {load.overCap ? ` · over ${WEEKLY_SOFT_CAP}h cap` : ''}
+                  </span>
+                </span>
                 {d.phone && <span className="sub">{d.phone}</span>}
               </span>
               <button onClick={() => updateDriver(d.id, { active: false })} title="Remove driver" style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18, padding: 4 }}>
