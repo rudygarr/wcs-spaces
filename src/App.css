@@ -2314,6 +2314,75 @@
 .qty-n { min-width: 30px; text-align: center; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .qty-avail { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 84px; text-align: right; }
 
+/* ---- Saved calendar views + filters (S7) ---- */
+.view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0.5px solid var(--border-2);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.view-chip.on {
+  background: var(--green);
+  color: #fff;
+  border-color: transparent;
+}
+.view-chip-x {
+  font-size: 13px;
+  margin-left: 4px;
+  opacity: 0.6;
+  border-radius: 50%;
+  padding: 1px;
+}
+.view-chip-x:hover {
+  opacity: 1;
+}
+.view-chip-add {
+  color: var(--green);
+  border-style: dashed;
+}
+.btn-soft.active-filter {
+  border-color: var(--green);
+  color: var(--green);
+}
+.filter-panel {
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  margin-bottom: 9px;
+}
+.filter-clear {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 /* ---- Insights report controls (S3) ---- */
 .report-bar {
   display: flex;

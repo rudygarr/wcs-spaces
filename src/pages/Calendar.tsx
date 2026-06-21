@@ -18,17 +18,64 @@ import { checkinState } from '../lib/checkin';
 import { buildICS, downloadICS } from '../lib/ics';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
+import type { EventRec } from '../lib/types';
 
 export default function Calendar() {
   const nav = useNavigate();
-  const { db } = useStore();
+  const { db, addCalendarView, removeCalendarView } = useStore();
   const { user } = useSession();
   const [day, setDay] = useState<Date>(DEMO_TODAY);
   const [view, setView] = useState<'mine' | 'school'>('school');
+  const [folders, setFolders] = useState<string[]>([]); // room folders to include; [] = all
+  const [hideNotices, setHideNotices] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Room → folder, and the distinct folder list for the filter chips.
+  const roomFolder = new Map(db.rooms.map((r) => [r.name, r.folder]));
+  const allFolders = [...new Set(db.rooms.map((r) => r.folder))].sort();
+
+  // One predicate drives both the day list and the export, so what you see is
+  // what you get out.
+  const matchesFilters = (e: EventRec) => {
+    if (view === 'mine' && !isMine(e, user.name)) return false;
+    if (e.kind === 'notice') return !hideNotices; // FYI entries are toggled, not folder-filtered
+    if (folders.length === 0) return true;
+    return e.rooms.some((r) => {
+      const f = roomFolder.get(r);
+      return f != null && folders.includes(f);
+    });
+  };
+
   const dayEvents = eventsOnDay(db.events, day);
-  const list = view === 'mine' ? dayEvents.filter((e) => isMine(e, user.name)) : dayEvents;
+  const list = dayEvents.filter(matchesFilters);
   const conflicts = findConflicts(dayEvents);
   const week = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(day), i));
+
+  // Saved views available to this user: shared (seeded) + their own.
+  const myViews = (db.calendarViews ?? []).filter((v) => v.shared || v.owner === user.name);
+  const sameFolders = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+  const activeView = myViews.find((v) => v.scope === view && v.hideNotices === hideNotices && sameFolders(v.folders, folders));
+  const filterCount = folders.length + (hideNotices ? 1 : 0);
+  const isDefault = view === 'school' && filterCount === 0;
+
+  function toggleFolder(f: string) {
+    setFolders((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+  }
+  function clearFilters() {
+    setView('school');
+    setFolders([]);
+    setHideNotices(false);
+  }
+  function applyView(v: (typeof myViews)[number]) {
+    setView(v.scope);
+    setFolders(v.folders);
+    setHideNotices(v.hideNotices);
+  }
+  function saveCurrentView() {
+    const name = window.prompt('Name this view (e.g. "My theater week")');
+    if (!name?.trim()) return;
+    addCalendarView({ name: name.trim(), owner: user.name, scope: view, folders, hideNotices });
+  }
 
   return (
     <>
@@ -82,7 +129,34 @@ export default function Calendar() {
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+      {/* ---- Saved views: recall a scope + folder + notice filter in one tap ---- */}
+      <div className="view-bar">
+        <button className={'view-chip' + (isDefault ? ' on' : '')} onClick={clearFilters}>
+          All events
+        </button>
+        {myViews.map((v) => (
+          <button key={v.id} className={'view-chip' + (activeView?.id === v.id ? ' on' : '')} onClick={() => applyView(v)}>
+            {!v.shared && <i className="ti ti-user" style={{ fontSize: 12, marginRight: 4, opacity: 0.7 }} />}
+            {v.name}
+            {!v.shared && (
+              <i
+                className="ti ti-x view-chip-x"
+                role="button"
+                aria-label={`Delete ${v.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete the saved view "${v.name}"?`)) removeCalendarView(v.id);
+                }}
+              />
+            )}
+          </button>
+        ))}
+        <button className="view-chip view-chip-add" onClick={saveCurrentView}>
+          <i className="ti ti-plus" /> Save
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: showFilters ? 10 : 14 }}>
         <div className="seg seg-sm" style={{ flex: 1 }}>
           <button className={view === 'mine' ? 'active' : ''} onClick={() => setView('mine')}>
             Your events
@@ -92,15 +166,22 @@ export default function Calendar() {
           </button>
         </div>
         <button
+          className={'btn-soft' + (filterCount ? ' active-filter' : '')}
+          aria-label="Filters"
+          style={{ padding: '0 12px' }}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          <i className="ti ti-filter" />
+          {filterCount > 0 && <span style={{ marginLeft: 4 }}>{filterCount}</span>}
+        </button>
+        <button
           className="btn-soft"
           aria-label="Export to calendar"
           style={{ padding: '0 12px' }}
           onClick={() => {
-            const evs =
-              view === 'mine'
-                ? db.events.filter((e) => isMine(e, user.name) && e.starts_at)
-                : db.events.filter((e) => e.starts_at);
-            downloadICS(view === 'mine' ? 'my-wcs-calendar' : 'wcs-school-calendar', buildICS(evs, view === 'mine' ? `${user.name} — WCS` : 'WCS School Calendar'));
+            const evs = db.events.filter((e) => e.starts_at && matchesFilters(e));
+            const named = !isDefault;
+            downloadICS(view === 'mine' ? 'my-wcs-calendar' : 'wcs-calendar', buildICS(evs, named ? `WCS — ${activeView?.name ?? 'Filtered'}` : 'WCS School Calendar'));
           }}
         >
           <i className="ti ti-calendar-down" />
@@ -109,6 +190,30 @@ export default function Calendar() {
           <i className="ti ti-plus" /> Book
         </button>
       </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <div className="filter-head">
+            <span>Spaces</span>
+            {filterCount > 0 && (
+              <button className="filter-clear" onClick={clearFilters}>
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="view-bar" style={{ marginBottom: 10 }}>
+            {allFolders.map((f) => (
+              <button key={f} className={'chip' + (folders.includes(f) ? ' on' : '')} onClick={() => toggleFolder(f)}>
+                {f}
+              </button>
+            ))}
+          </div>
+          <button className={'chip' + (hideNotices ? ' on' : '')} onClick={() => setHideNotices((v) => !v)}>
+            <i className={'ti ' + (hideNotices ? 'ti-eye-off' : 'ti-eye')} style={{ fontSize: 13, marginRight: 5 }} />
+            Hide FYI / notices
+          </button>
+        </div>
+      )}
 
       {blackoutForDate(day) && (
         <div className="banner" style={{ background: 'var(--info-tint, var(--surface-2))', borderColor: 'var(--info)', color: 'var(--info)' }}>
@@ -132,12 +237,16 @@ export default function Calendar() {
       )}
 
       <div className="list">
-        {list.length === 0 && view === 'mine' && (
+        {list.length === 0 && view === 'mine' && filterCount === 0 && (
           <button className="empty" style={{ width: '100%', background: 'none', border: 'none' }} onClick={() => setView('school')}>
             Nothing of yours this day — see school events →
           </button>
         )}
-        {list.length === 0 && view === 'school' && <div className="empty">Nothing scheduled this day.</div>}
+        {list.length === 0 && (view === 'school' || filterCount > 0) && (
+          <button className="empty" style={{ width: '100%', background: 'none', border: 'none', cursor: filterCount ? 'pointer' : 'default' }} onClick={() => filterCount && clearFilters()}>
+            {filterCount > 0 || view === 'mine' ? 'Nothing matches this view — tap to clear filters' : 'Nothing scheduled this day.'}
+          </button>
+        )}
         {list.map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
           const notice = e.kind === 'notice';

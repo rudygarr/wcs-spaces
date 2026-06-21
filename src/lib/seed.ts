@@ -5,12 +5,12 @@ import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import { seedAssets } from '../data/assets';
-import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment } from './types';
+import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 19;
+export const SEED_VERSION = 20;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -391,6 +391,16 @@ function seedComments(): RequestComment[] {
   ];
 }
 
+// Shared starter calendar views, so the saved-view bar isn't empty on first
+// load. Users can add their own on top (scoped to them).
+function seedCalendarViews(): CalendarView[] {
+  return [
+    { id: 'cv-ath', name: 'Athletics', owner: '', shared: true, scope: 'school', folders: ['Athletics'], hideNotices: false },
+    { id: 'cv-arts', name: 'Performing arts', owner: '', shared: true, scope: 'school', folders: ['Lighthouse PAC', 'The Beacon'], hideNotices: false },
+    { id: 'cv-clean', name: 'Spaces only', owner: '', shared: true, scope: 'school', folders: [], hideNotices: true },
+  ];
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -438,6 +448,7 @@ export function buildSeed(): Database {
     rentals: rentalsSeed.rentals,
     audit: seedAudit(),
     comments: seedComments(),
+    calendarViews: seedCalendarViews(),
     seedVersion: SEED_VERSION,
   };
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -56,6 +56,8 @@ interface StoreCtx {
   logAudit: (e: Omit<AuditEntry, 'id' | 'at' | 'actor'>) => void;
   addComment: (entityId: string, author: string, body: string) => void;
   withdrawRequest: (kind: 'work' | 'event', id: string, withdrawn: boolean) => void;
+  addCalendarView: (v: Omit<CalendarView, 'id'>) => string;
+  removeCalendarView: (id: string) => void;
   reset: () => void;
 }
 
@@ -376,6 +378,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const nd = { ...d, events: d.events.map((x) => (x.id === id ? { ...x, withdrawn } : x)) };
         return withAudit(nd, { action: withdrawn ? 'Withdrew request' : 'Reinstated request', entityType: 'booking', entityId: id, entityLabel: e.name, link: `#/event/${id}` });
       });
+    },
+    addCalendarView(v) {
+      const id = uid('cv');
+      commit((d) => ({ ...d, calendarViews: [...(d.calendarViews ?? []), { ...v, id }] }));
+      return id;
+    },
+    removeCalendarView(id) {
+      commit((d) => ({ ...d, calendarViews: (d.calendarViews ?? []).filter((v) => v.id !== id) }));
     },
     reset() {
       void clearDB();

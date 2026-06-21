@@ -242,6 +242,20 @@ export interface RequestComment {
   at: string;
 }
 
+// A saved calendar filter (item S7). The school calendar gets jumbled at scale
+// (the FMX/PCO gripe) — a named view recalls a scope + folder + notice filter in
+// one tap. `shared` views ship with the demo and show for everyone; user-saved
+// views are scoped to their creator.
+export interface CalendarView {
+  id: string;
+  name: string;
+  owner: string; // creator; '' for seeded/shared views
+  shared?: boolean;
+  scope: 'mine' | 'school';
+  folders: string[]; // room folders to include; [] = all spaces
+  hideNotices: boolean; // drop FYI/notice entries
+}
+
 // A saved request template — prefills a request door so common events are one tap.
 export interface Template {
   id: string;
@@ -327,6 +341,7 @@ export interface Database {
   rentals?: Rental[];
   audit?: AuditEntry[];
   comments?: RequestComment[];
+  calendarViews?: CalendarView[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;
