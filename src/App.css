@@ -371,6 +371,44 @@
   font-weight: 700;
 }
 
+/* ---- Global search (S1) ---- */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
+  margin-top: 8px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-3);
+}
+.search-field i {
+  font-size: 18px;
+}
+.search-field input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text-1);
+}
+.search-clear {
+  border: none;
+  background: var(--border);
+  color: var(--text-2);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .section-label {
   display: flex;
   align-items: baseline;

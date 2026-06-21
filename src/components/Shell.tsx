@@ -210,6 +210,9 @@ export default function Shell({ children }: { children: ReactNode }) {
             <span className="brand-name">Spaces</span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button className="bell" onClick={() => nav('/search')} aria-label="Search">
+              <i className="ti ti-search" />
+            </button>
             <NotifBell />
             <RoleSwitcher />
           </div>

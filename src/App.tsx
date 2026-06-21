@@ -23,6 +23,7 @@ import AssetDetail from './pages/AssetDetail';
 import Rentals from './pages/Rentals';
 import RentalDetail from './pages/RentalDetail';
 import Audit from './pages/Audit';
+import Search from './pages/Search';
 import './App.css';
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/rentals" element={<Rentals />} />
               <Route path="/rental/:id" element={<RentalDetail />} />
               <Route path="/audit" element={<Audit />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/work/:id" element={<WorkDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />
