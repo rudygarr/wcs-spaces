@@ -9,12 +9,13 @@ import { buildICS, downloadICS, slug } from '../lib/ics';
 import { ConflictThread } from '../components/ConflictThread';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import AuditHistory from '../components/AuditHistory';
+import RequestThread from '../components/RequestThread';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
 export default function EventDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit } = useStore();
+  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit, withdrawRequest } = useStore();
   const { user } = useSession();
   const ev = db.events.find((e) => e.id === id);
 
@@ -396,7 +397,41 @@ export default function EventDetail() {
           <i className="ti ti-rotate" /> Reset to pending
         </button>
       )}
+      {/* ---- Requester self-service: withdraw a pending request ---- */}
+      {ev.owner === user.name && ev.kind !== 'notice' && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Your request</span>
+          </div>
+          {ev.withdrawn && (
+            <div className="banner" style={{ background: 'var(--warn-tint)', borderColor: 'transparent', color: 'var(--text-2)', marginBottom: 12 }}>
+              <i className="ti ti-archive" style={{ color: 'var(--warn)' }} />
+              <span>You withdrew this booking request — approvers no longer see it. Reinstate it anytime; the history is kept.</span>
+            </div>
+          )}
+          {ev.status === 'Pending' &&
+            (ev.withdrawn ? (
+              <button className="btn-soft" onClick={() => withdrawRequest('event', ev.id, false)}>
+                <i className="ti ti-rotate" /> Reinstate request
+              </button>
+            ) : (
+              <button className="btn-soft" onClick={() => { if (confirm('Withdraw this booking request? It leaves the approval queue but you can reinstate it anytime.')) withdrawRequest('event', ev.id, true); }}>
+                <i className="ti ti-archive" /> Withdraw request
+              </button>
+            ))}
+        </>
+      )}
+
       <AuditHistory entityId={ev.id} />
+
+      {ev.kind !== 'notice' && (
+        <RequestThread
+          entityId={ev.id}
+          link={'#/event/' + ev.id}
+          title={ev.name}
+          participants={[ev.owner ?? '', ...steps.map((s) => s.approver)]}
+        />
+      )}
       <div style={{ height: 20 }} />
     </>
   );

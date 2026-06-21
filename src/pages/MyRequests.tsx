@@ -21,6 +21,7 @@ interface MyReq {
   status: string;
   done: boolean; // terminal (Done / Approved / Declined)
   declined: boolean;
+  withdrawn: boolean; // requester pulled it back — reversible
 }
 
 const WORK_STEPS: WorkStatus[] = ['New', 'Assigned', 'Scheduled', 'In progress', 'Done'];
@@ -66,6 +67,7 @@ export default function MyRequests() {
       status: w.status,
       done: w.status === 'Done',
       declined: false,
+      withdrawn: !!w.withdrawn,
     });
   }
 
@@ -94,6 +96,7 @@ export default function MyRequests() {
       status: e.status,
       done: e.status === 'Approved',
       declined,
+      withdrawn: !!e.withdrawn,
     });
   }
 
@@ -137,15 +140,17 @@ export default function MyRequests() {
               className="pill"
               style={{
                 flexShrink: 0,
-                background: r.declined
-                  ? 'color-mix(in srgb, var(--bad) 14%, transparent)'
-                  : r.done
-                    ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
-                    : 'var(--surface-2)',
-                color: r.declined ? 'var(--bad)' : r.done ? 'var(--ok)' : 'var(--text-2)',
+                background: r.withdrawn
+                  ? 'var(--warn-tint)'
+                  : r.declined
+                    ? 'color-mix(in srgb, var(--bad) 14%, transparent)'
+                    : r.done
+                      ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
+                      : 'var(--surface-2)',
+                color: r.withdrawn ? 'var(--warn)' : r.declined ? 'var(--bad)' : r.done ? 'var(--ok)' : 'var(--text-2)',
               }}
             >
-              {r.status}
+              {r.withdrawn ? 'Withdrawn' : r.status}
             </span>
           </div>
           <div className="myreq-track">

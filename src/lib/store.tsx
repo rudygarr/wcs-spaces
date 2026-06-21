@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -54,6 +54,8 @@ interface StoreCtx {
   confirmRental: (id: string) => void;
   cancelRental: (id: string) => void;
   logAudit: (e: Omit<AuditEntry, 'id' | 'at' | 'actor'>) => void;
+  addComment: (entityId: string, author: string, body: string) => void;
+  withdrawRequest: (kind: 'work' | 'event', id: string, withdrawn: boolean) => void;
   reset: () => void;
 }
 
@@ -353,6 +355,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     logAudit(e) {
       commit((d) => withAudit(d, e));
+    },
+    // Post a comment on a request. Demo-frame: stamp at DEMO_TODAY. Recipients
+    // are notified by the caller (it knows the participants).
+    addComment(entityId, author, body) {
+      const comment: RequestComment = { id: uid('cm'), entityId, author, body: body.trim(), at: DEMO_TODAY.toISOString() };
+      commit((d) => ({ ...d, comments: [...(d.comments ?? []), comment] }));
+    },
+    // Requester pulls a request back (or reinstates it). Reversible; audited.
+    withdrawRequest(kind, id, withdrawn) {
+      commit((d) => {
+        if (kind === 'work') {
+          const w = d.workItems.find((x) => x.id === id);
+          if (!w) return d;
+          const nd = { ...d, workItems: d.workItems.map((x) => (x.id === id ? { ...x, withdrawn } : x)) };
+          return withAudit(nd, { action: withdrawn ? 'Withdrew request' : 'Reinstated request', entityType: 'work', entityId: id, entityLabel: w.title, link: `#/work/${id}` });
+        }
+        const e = d.events.find((x) => x.id === id);
+        if (!e) return d;
+        const nd = { ...d, events: d.events.map((x) => (x.id === id ? { ...x, withdrawn } : x)) };
+        return withAudit(nd, { action: withdrawn ? 'Withdrew request' : 'Reinstated request', entityType: 'booking', entityId: id, entityLabel: e.name, link: `#/event/${id}` });
+      });
     },
     reset() {
       void clearDB();

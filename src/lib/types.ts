@@ -51,6 +51,10 @@ export interface WcsEvent {
   // reversible reclaim, never a punishment.
   checkInAt?: string;
   released?: boolean;
+  // The requester pulled this back before it was decided. Reversible (soft, true
+  // to the philosophy) — reinstating clears it. Withdrawn requests drop out of
+  // approvers' queues but keep their history.
+  withdrawn?: boolean;
 }
 
 export interface ApprovalRec {
@@ -159,6 +163,9 @@ export interface WorkItem {
   // A piece of equipment/device assigned to this job (e.g. a loaner TV for IT,
   // a tent for Maintenance) — the non-trip equivalent of assigning a bus.
   resource?: string;
+  // The requester pulled this back before it was worked. Reversible; withdrawn
+  // items drop out of department queues but keep their history.
+  withdrawn?: boolean;
 }
 
 export interface Driver {
@@ -223,6 +230,18 @@ export interface AuditEntry {
   link?: string; // hash route to the entity
 }
 
+// ---- Request conversation (item S2) ----
+// A comment on a request (work item or booking). Competitors get dinged for
+// "can't edit after submit" and "no indication when someone replies" (Incident
+// IQ); this gives every request a thread, and posting one pings the other party.
+export interface RequestComment {
+  id: string;
+  entityId: string; // the work item or event this belongs to
+  author: string;
+  body: string;
+  at: string;
+}
+
 // A saved request template — prefills a request door so common events are one tap.
 export interface Template {
   id: string;
@@ -246,7 +265,7 @@ export type NotifChannel = 'in-app' | 'email' | 'teams';
 export interface Notif {
   id: string;
   to: string; // person name this is for
-  kind: 'assigned' | 'crew' | 'done';
+  kind: 'assigned' | 'crew' | 'done' | 'comment';
   title: string;
   body?: string;
   link?: string; // hash route to open when tapped
@@ -307,6 +326,7 @@ export interface Database {
   assets?: Asset[];
   rentals?: Rental[];
   audit?: AuditEntry[];
+  comments?: RequestComment[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

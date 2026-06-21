@@ -6,6 +6,8 @@ import { canDelegate, deptTeam, assignedToMe } from '../lib/fulfill';
 import { legCollision, driverBusyElsewhere } from '../lib/conflicts';
 import { driverLoad, suggestDriver, WEEKLY_SOFT_CAP } from '../lib/drivers';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
+import AuditHistory from '../components/AuditHistory';
+import RequestThread from '../components/RequestThread';
 import { statusTint, priorityColor } from './Queue';
 import type { Priority, TripLeg, WorkItem, WorkStatus } from '../lib/types';
 
@@ -103,11 +105,13 @@ function ReadOnlyTrip({ w }: { w: WorkItem }) {
 export default function WorkDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateWorkItem, addDriver, notify } = useStore();
+  const { db, updateWorkItem, addDriver, notify, withdrawRequest } = useStore();
   const { user } = useSession();
   const w = db.workItems.find((x) => x.id === id);
   const [addingDriver, setAddingDriver] = useState(false);
   const [newDriver, setNewDriver] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draftDetails, setDraftDetails] = useState('');
 
   if (!w) {
     return (
@@ -513,6 +517,62 @@ export default function WorkDetail() {
           <i className="ti ti-calendar" /> View the linked event
         </button>
       )}
+
+      {/* ---- Requester self-service: edit details / withdraw while it's open ---- */}
+      {w.requestedBy === user.name && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Your request</span>
+          </div>
+          {w.withdrawn && (
+            <div className="banner" style={{ background: 'var(--warn-tint)', borderColor: 'transparent', color: 'var(--text-2)', marginBottom: 12 }}>
+              <i className="ti ti-archive" style={{ color: 'var(--warn)' }} />
+              <span>You withdrew this — it's out of the {w.department} queue. Reinstate it anytime; the history is kept.</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {w.status !== 'Done' && !w.withdrawn && (
+              <button className="btn-soft" onClick={() => { setDraftDetails(w.details ?? ''); setEditing((v) => !v); }}>
+                <i className="ti ti-pencil" /> {editing ? 'Cancel edit' : 'Edit details'}
+              </button>
+            )}
+            {w.status !== 'Done' &&
+              (w.withdrawn ? (
+                <button className="btn-soft" onClick={() => withdrawRequest('work', w.id, false)}>
+                  <i className="ti ti-rotate" /> Reinstate request
+                </button>
+              ) : (
+                <button className="btn-soft" onClick={() => { if (confirm('Withdraw this request? It leaves the queue but you can reinstate it anytime.')) withdrawRequest('work', w.id, true); }}>
+                  <i className="ti ti-archive" /> Withdraw request
+                </button>
+              ))}
+          </div>
+          {editing && !w.withdrawn && (
+            <div style={{ marginTop: 12 }}>
+              <textarea
+                value={draftDetails}
+                onChange={(e) => setDraftDetails(e.target.value)}
+                rows={3}
+                placeholder="Describe the problem or request…"
+                style={{ width: '100%', borderRadius: 'var(--r-sm)', border: '0.5px solid var(--border-2)', background: 'var(--surface)', color: 'var(--text-1)', padding: 12, fontSize: 15, fontFamily: 'inherit', resize: 'vertical' }}
+              />
+              <button className="fab" style={{ marginTop: 10, justifyContent: 'center' }} onClick={() => { updateWorkItem(w.id, { details: draftDetails.trim() || undefined }); setEditing(false); }}>
+                <i className="ti ti-check" /> Save details
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      <AuditHistory entityId={w.id} />
+
+      <RequestThread
+        entityId={w.id}
+        link={'#/work/' + w.id}
+        title={w.title}
+        participants={[w.requestedBy, w.assignee ?? '', ...(w.trip?.legs.map((l) => l.driver ?? '') ?? [])]}
+      />
+
       <div style={{ height: 24 }} />
     </>
   );

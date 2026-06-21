@@ -71,8 +71,8 @@ export default function Insights() {
     );
   }
 
-  const pendingApprovals = db.events.filter((e) => e.status === 'Pending').length;
-  const openWork = db.workItems.filter((w) => w.status !== 'Done').length;
+  const pendingApprovals = db.events.filter((e) => e.status === 'Pending' && !e.withdrawn).length;
+  const openWork = db.workItems.filter((w) => !w.withdrawn && w.status !== 'Done').length;
   const conflicts = allConflicts(db).length;
   const bookings = db.events.filter((e) => e.kind !== 'notice').length;
 

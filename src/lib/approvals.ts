@@ -74,7 +74,7 @@ export function canApprove(user: PersonRec, steps: ApprovalStep[]): boolean {
 // A real booking request that can sit in an approval queue (excludes calendar
 // notices and the parenthetical annotation events like "(Music bleed…)").
 export function isApprovable(e: EventRec): boolean {
-  return e.kind !== 'notice' && e.status === 'Pending' && !e.name.trim().startsWith('(');
+  return e.kind !== 'notice' && e.status === 'Pending' && !e.withdrawn && !e.name.trim().startsWith('(');
 }
 
 // Events still waiting on THIS person's sign-off.

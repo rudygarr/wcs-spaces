@@ -5,12 +5,12 @@ import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import { seedAssets } from '../data/assets';
-import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry } from './types';
+import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 18;
+export const SEED_VERSION = 19;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -381,6 +381,16 @@ function seedAudit(): AuditEntry[] {
   ];
 }
 
+// A short conversation on a request, so the discussion thread isn't empty on
+// first load. Anchored to w-m3 (Amy Williams → Jose Oviedo, the warm classroom).
+function seedComments(): RequestComment[] {
+  return [
+    { id: 'cm-1', entityId: 'w-m3', author: 'Amy Williams', body: "Thanks for picking this up. It's worst right after lunch — is there anything we can do before Friday's parent visits?", at: '2026-08-19T13:10:00-04:00' },
+    { id: 'cm-2', entityId: 'w-m3', author: 'Jose Oviedo', body: 'Looked at it this morning — the unit is low on refrigerant. Ordered the part, scheduling the fix for the 21st. I dropped a portable AC in the room for now.', at: '2026-08-19T15:42:00-04:00' },
+    { id: 'cm-3', entityId: 'w-m3', author: 'Amy Williams', body: 'The portable unit is helping a lot, thank you! Friday should be fine.', at: '2026-08-20T09:05:00-04:00' },
+  ];
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -427,6 +437,7 @@ export function buildSeed(): Database {
     assets: seedAssets,
     rentals: rentalsSeed.rentals,
     audit: seedAudit(),
+    comments: seedComments(),
     seedVersion: SEED_VERSION,
   };
 }

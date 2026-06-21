@@ -44,10 +44,11 @@ export default function Queue() {
   const [mineOnly, setMineOnly] = useState(params.get('mine') === '1');
   const [showDone, setShowDone] = useState(false);
 
-  const myCount = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
+  const myCount = db.workItems.filter((w) => !w.withdrawn && w.status !== 'Done' && assignedToMe(w, user)).length;
   const canManageCrew = (['Maintenance', 'IT', 'Transportation'] as Department[]).some((d) => canDelegate(user, d));
 
   const items = db.workItems
+    .filter((w) => !w.withdrawn) // requester pulled it back — out of the queue, history kept
     .filter((w) => (dept === 'All' ? true : w.department === dept))
     .filter((w) => (mineOnly ? assignedToMe(w, user) : true))
     .filter((w) => (showDone ? true : w.status !== 'Done'))
@@ -63,7 +64,7 @@ export default function Queue() {
     (g) => g.rows.length > 0,
   );
 
-  const openCount = (d: Department) => db.workItems.filter((w) => w.department === d && w.status !== 'Done').length;
+  const openCount = (d: Department) => db.workItems.filter((w) => !w.withdrawn && w.department === d && w.status !== 'Done').length;
 
   function pick(d: Department | 'All') {
     setDept(d);

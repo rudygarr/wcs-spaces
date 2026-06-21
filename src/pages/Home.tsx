@@ -35,12 +35,12 @@ export default function Home() {
   const shown = view === 'mine' ? mine : today;
   const conflicts = findConflicts(today);
   const liveConflicts = allConflicts(db);
-  const pendingCount = db.events.filter((e) => e.status === 'Pending').length;
-  const openWork = (dept: string) => db.workItems.filter((w) => w.department === dept && w.status !== 'Done').length;
-  const myTasks = db.workItems.filter((w) => w.status !== 'Done' && assignedToMe(w, user)).length;
+  const pendingCount = db.events.filter((e) => e.status === 'Pending' && !e.withdrawn).length;
+  const openWork = (dept: string) => db.workItems.filter((w) => !w.withdrawn && w.department === dept && w.status !== 'Done').length;
+  const myTasks = db.workItems.filter((w) => !w.withdrawn && w.status !== 'Done' && assignedToMe(w, user)).length;
   const myOpenReqs =
-    db.workItems.filter((w) => w.requestedBy === user.name && w.status !== 'Done').length +
-    db.events.filter((e) => e.owner === user.name && e.kind !== 'notice' && e.status === 'Pending').length;
+    db.workItems.filter((w) => !w.withdrawn && w.requestedBy === user.name && w.status !== 'Done').length +
+    db.events.filter((e) => e.owner === user.name && e.kind !== 'notice' && e.status === 'Pending' && !e.withdrawn).length;
   const myApprovals = pendingForApprover(db, user.name).length;
   const canSeePM = user.site_admin || user.department === 'Maintenance';
   const pmDue = pmDueCount(db);

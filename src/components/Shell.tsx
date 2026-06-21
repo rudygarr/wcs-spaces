@@ -95,6 +95,7 @@ const NOTIF_ICON: Record<string, string> = {
   assigned: 'ti-clipboard-check',
   crew: 'ti-users-group',
   done: 'ti-circle-check',
+  comment: 'ti-message-2',
 };
 
 function NotifBell() {
