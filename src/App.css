@@ -880,6 +880,12 @@
   color: var(--text-2);
   margin: 14px 0 6px;
 }
+.field-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+  margin-top: 7px;
+}
 .add-row {
   display: flex;
   align-items: center;

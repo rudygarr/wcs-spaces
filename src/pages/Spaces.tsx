@@ -39,11 +39,15 @@ function AddSpace({ kind, folders, onClose }: { kind: 'rooms' | 'resources'; fol
   const { addRoom, addResource } = useStore();
   const [name, setName] = useState('');
   const [folder, setFolder] = useState(folders[0] ?? '');
+  const [qty, setQty] = useState('');
   const label = kind === 'rooms' ? 'room' : 'resource';
   function submit() {
     if (!name.trim() || !folder.trim()) return;
     if (kind === 'rooms') addRoom(name, folder.trim());
-    else addResource(name, folder.trim());
+    else {
+      const n = parseInt(qty, 10);
+      addResource(name, folder.trim(), Number.isFinite(n) && n > 0 ? n : undefined);
+    }
     onClose();
   }
   return (
@@ -57,6 +61,15 @@ function AddSpace({ kind, folders, onClose }: { kind: 'rooms' | 'resources'; fol
           <option key={f} value={f} />
         ))}
       </datalist>
+      {kind === 'resources' && (
+        <>
+          <label className="flabel">How many? (optional)</label>
+          <input style={field} type="number" min="1" inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 3 nurses, 200 chairs" />
+          <div className="field-hint">
+            Set a count to track availability and get over-booking warnings. Leave blank for an on-call service the team staffs as needed (e.g. an athletic trainer).
+          </div>
+        </>
+      )}
       <button style={{ ...primaryBtn, marginTop: 18 }} onClick={submit}>
         Add {label}
       </button>

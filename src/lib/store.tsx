@@ -41,7 +41,7 @@ function withAudit(d: Database, e: Omit<AuditEntry, 'id' | 'at' | 'actor'>): Dat
 interface StoreCtx {
   db: Database;
   addRoom: (name: string, folder: string) => Room;
-  addResource: (name: string, folder: string) => Resource;
+  addResource: (name: string, folder: string, qty?: number) => Resource;
   addPerson: (p: Omit<PersonRec, 'id'>) => PersonRec;
   updatePerson: (id: string, patch: Partial<PersonRec>) => void;
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
@@ -148,8 +148,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       commit((d) => ({ ...d, rooms: [...d.rooms, room] }));
       return room;
     },
-    addResource(name, folder) {
-      const resource: Resource = { id: uid('res'), name: name.trim(), folder };
+    addResource(name, folder, qty) {
+      // A count makes it a tracked pool (availability + soft over-allocation, like
+      // Nurses or Chairs); omitting it leaves an uncapped on-call service (like the
+      // Athletic Trainer the AD staffs as needed).
+      const resource: Resource = {
+        id: uid('res'),
+        name: name.trim(),
+        folder,
+        ...(typeof qty === 'number' && qty > 0 ? { qty } : {}),
+      };
       commit((d) => ({ ...d, resources: [...d.resources, resource] }));
       return resource;
     },
