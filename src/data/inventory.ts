@@ -111,6 +111,13 @@ export const resourceFolders: Folder[] = [
   { name: 'Custodial/Cleaning', items: ['Cleaning'] },
   { name: 'Catering', items: ['Catering'] },
   { name: 'Administration', items: ['Security'] },
+  // School-wide health coverage — a finite pool (see RESOURCE_STOCK), so booking
+  // a nurse onto a field trip shows the rest of campus how many are left.
+  { name: 'Health Office', items: ['Nurse'] },
+  // Athletics staffing. The trainer is intentionally NOT stock-capped: the AD
+  // pulls in trainers + seasonal interns as needed, so this tracks demand/requests
+  // (who needs a trainer, when) rather than a hard count she'd hit a wall on.
+  { name: 'Athletics', items: ['Athletic Trainer'] },
 ];
 
 export const allRooms: string[] = roomFolders.flatMap((f) => f.items);

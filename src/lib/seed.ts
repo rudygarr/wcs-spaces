@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 21;
+export const SEED_VERSION = 22;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -57,6 +57,10 @@ const RESOURCE_STOCK: Record<string, number> = {
   'TV': 15,
   'Owl Camera': 12,
   'Band Shell': 1,
+  // School-wide nursing pool: two nurses cover the whole campus. Booking one onto
+  // a field trip leaves one; a third request in a day trips the soft over-allocation
+  // warning. (Athletic Trainer is deliberately omitted — elastic, AD-managed.)
+  'Nurse': 2,
 };
 
 // Two big back-to-back events on DEMO_TODAY that together oversubscribe the
@@ -169,6 +173,68 @@ function seedSeries(): EventRec[] {
     });
   }
   return out;
+}
+
+// Staff-coverage demo (Nurse / Athletic Trainer). On DEMO_TODAY a field trip
+// takes one nurse off-campus and an on-campus physicals clinic books the other,
+// so the school-wide pool reads 0 of 2 free — exactly the "who's covered today?"
+// signal. A home volleyball game requests the (uncapped) athletic trainer to show
+// demand the AD then staffs.
+function seedCoverageDemo(): EventRec[] {
+  const base = {
+    all_day: false,
+    setup_starts: null,
+    teardown_ends: null,
+    recurrence: null,
+    percent_approved: 100,
+    status: 'Approved',
+    source: 'internal' as const,
+    kind: 'booking' as const,
+  };
+  return [
+    {
+      ...base,
+      id: 'e-cov-1',
+      name: '5th Grade Field Trip — Zoo Miami',
+      owner: 'Lori Sakkab',
+      location: 'Off campus — Zoo Miami',
+      rooms: [],
+      resources: ['Nurse'],
+      resourceQty: { 'Nurse': 1 },
+      audience: 'Elementary',
+      starts_at: '2026-08-20T13:00:00.000Z', // 9am EDT
+      ends_at: '2026-08-20T18:00:00.000Z', // 2pm EDT
+      details: 'Off-campus field trip — a campus nurse travels with the group, so one of the two is out today.',
+    },
+    {
+      ...base,
+      id: 'e-cov-2',
+      name: 'Fall Sports Physicals',
+      owner: 'Adriana Marrero',
+      location: 'SAC',
+      rooms: ['SAC'],
+      resources: ['Nurse'],
+      resourceQty: { 'Nurse': 1 },
+      category: 'Athletics',
+      starts_at: '2026-08-20T17:00:00.000Z', // 1pm EDT
+      ends_at: '2026-08-20T20:00:00.000Z', // 4pm EDT
+      details: 'On-campus physicals clinic books the second nurse. With both committed, no nurse is free for a new request today.',
+    },
+    {
+      ...base,
+      id: 'e-cov-3',
+      name: 'Varsity Volleyball vs Gulliver Prep',
+      owner: 'Adriana Marrero',
+      location: 'Gym',
+      rooms: ['Gym'],
+      resources: ['Athletic Trainer'],
+      category: 'Athletics',
+      homeAway: 'Home',
+      starts_at: '2026-08-20T22:30:00.000Z', // 6:30pm EDT
+      ends_at: '2026-08-21T00:30:00.000Z', // 8:30pm EDT
+      details: 'Home game — athletic trainer requested. The AD assigns a trainer (staff or seasonal intern); the request is visible here so coverage is planned.',
+    },
+  ];
 }
 
 // Three bookings on DEMO_TODAY (noon EDT) that show the check-in lifecycle:
@@ -474,7 +540,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...rentalsSeed.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,

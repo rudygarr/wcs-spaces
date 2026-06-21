@@ -31,6 +31,8 @@ const resIcons: Record<string, string> = {
   'Custodial/Cleaning': 'ti-spray',
   Catering: 'ti-tools-kitchen-2',
   Administration: 'ti-shield',
+  'Health Office': 'ti-stethoscope',
+  Athletics: 'ti-first-aid-kit',
 };
 
 function AddSpace({ kind, folders, onClose }: { kind: 'rooms' | 'resources'; folders: string[]; onClose: () => void }) {
