@@ -2313,3 +2313,52 @@
 .qty-step button:active { background: var(--green-tint); }
 .qty-n { min-width: 30px; text-align: center; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .qty-avail { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 84px; text-align: right; }
+
+/* ---- Insights report controls (S3) ---- */
+.report-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 12px;
+  padding: 12px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.report-seg {
+  width: 100%;
+}
+.report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.report-actions .btn-soft {
+  flex: 1 1 auto;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* ---- Print / PDF export ---- */
+@media print {
+  .topbar,
+  .tabbar,
+  .no-print {
+    display: none !important;
+  }
+  .container {
+    padding-top: 0 !important;
+  }
+  .ins-card,
+  .ins-stat {
+    break-inside: avoid;
+  }
+  body {
+    background: #fff;
+  }
+}

@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { allConflicts } from '../lib/conflicts';
+import { RANGES, rangeWindow, inWindow, bookingReport, workReport, rentalReport, toCSV, downloadCSV } from '../lib/report';
+import type { RangeKey } from '../lib/report';
 import type { Department, WorkStatus } from '../lib/types';
 
 const DEPTS: Department[] = ['Maintenance', 'IT', 'Transportation'];
@@ -25,23 +27,28 @@ export default function Insights() {
   const nav = useNavigate();
   const { db } = useStore();
   const { user } = useSession();
+  const [range, setRange] = useState<RangeKey>('all');
+  const [dept, setDept] = useState<Department | 'All'>('All');
 
   const canView = user.site_admin || user.resolves_conflicts || !!user.department;
 
   const m = useMemo(() => {
+    const win = rangeWindow(range);
+    // Filtered working sets — every metric and every export below respects these.
+    const fEvents = db.events.filter((e) => e.kind !== 'notice' && inWindow(e.starts_at, win));
+    const fWork = db.workItems.filter((w) => !w.withdrawn && inWindow(w.createdAt, win) && (dept === 'All' || w.department === dept));
+    const fRentals = (db.rentals ?? []).filter((r) => inWindow(r.date, win));
+
     // Bookings per room (real space demand).
     const roomCount = new Map<string, number>();
-    for (const e of db.events) {
-      if (e.kind === 'notice') continue;
-      for (const r of e.rooms) roomCount.set(r, (roomCount.get(r) || 0) + 1);
-    }
+    for (const e of fEvents) for (const r of e.rooms) roomCount.set(r, (roomCount.get(r) || 0) + 1);
     const rooms = db.rooms.map((r) => ({ name: r.name, n: roomCount.get(r.name) || 0 }));
     const topRooms = [...rooms].sort((a, b) => b.n - a.n).slice(0, 8);
     const underused = rooms.filter((r) => r.n <= 1).length;
 
     // Work orders by department + status.
-    const byDept = DEPTS.map((d) => {
-      const items = db.workItems.filter((w) => w.department === d);
+    const byDept = DEPTS.filter((d) => dept === 'All' || d === dept).map((d) => {
+      const items = fWork.filter((w) => w.department === d);
       return {
         dept: d,
         open: items.filter((w) => w.status !== 'Done').length,
@@ -49,18 +56,31 @@ export default function Insights() {
         total: items.length,
       };
     });
-    const pipeline = PIPELINE.map((s) => ({ status: s, n: db.workItems.filter((w) => w.status === s).length }));
+    const pipeline = PIPELINE.map((s) => ({ status: s, n: fWork.filter((w) => w.status === s).length }));
 
     // Turnaround: completedAt − createdAt over Done items.
-    const doneWithTimes = db.workItems.filter((w) => w.status === 'Done' && w.completedAt);
+    const doneWithTimes = fWork.filter((w) => w.status === 'Done' && w.completedAt);
     const hoursOf = (w: { createdAt: string; completedAt?: string }) =>
       (new Date(w.completedAt!).getTime() - new Date(w.createdAt).getTime()) / 3.6e6;
-    const avgTurnaround = doneWithTimes.length
-      ? doneWithTimes.reduce((s, w) => s + hoursOf(w), 0) / doneWithTimes.length
-      : null;
+    const avgTurnaround = doneWithTimes.length ? doneWithTimes.reduce((s, w) => s + hoursOf(w), 0) / doneWithTimes.length : null;
 
-    return { topRooms, underused, byDept, pipeline, avgTurnaround, doneCount: doneWithTimes.length };
-  }, [db]);
+    return {
+      topRooms,
+      underused,
+      byDept,
+      pipeline,
+      avgTurnaround,
+      doneCount: doneWithTimes.length,
+      fEvents,
+      fWork,
+      fRentals,
+      pendingApprovals: fEvents.filter((e) => e.status === 'Pending' && !e.withdrawn).length,
+      openWork: fWork.filter((w) => w.status !== 'Done').length,
+      doneAll: fWork.filter((w) => w.status === 'Done').length,
+      workTotal: fWork.length,
+      bookings: fEvents.length,
+    };
+  }, [db, range, dept]);
 
   if (!canView) {
     return (
@@ -71,26 +91,26 @@ export default function Insights() {
     );
   }
 
-  const pendingApprovals = db.events.filter((e) => e.status === 'Pending' && !e.withdrawn).length;
-  const openWork = db.workItems.filter((w) => !w.withdrawn && w.status !== 'Done').length;
   const conflicts = allConflicts(db).length;
-  const bookings = db.events.filter((e) => e.kind !== 'notice').length;
+  const rangeLabel = RANGES.find((r) => r.key === range)?.label ?? 'All time';
+  const scopeTag = (rangeLabel + (dept === 'All' ? '' : '-' + dept)).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  function exportCSV(kind: 'bookings' | 'work' | 'rentals') {
+    const r = kind === 'bookings' ? bookingReport(m.fEvents) : kind === 'work' ? workReport(m.fWork) : rentalReport(m.fRentals);
+    downloadCSV(`wcs-${kind}-${scopeTag}.csv`, toCSV(r.columns, r.rows));
+  }
 
   const turnaroundLabel =
-    m.avgTurnaround == null
-      ? '—'
-      : m.avgTurnaround < 24
-        ? `${Math.round(m.avgTurnaround)}h`
-        : `${(m.avgTurnaround / 24).toFixed(1)}d`;
+    m.avgTurnaround == null ? '—' : m.avgTurnaround < 24 ? `${Math.round(m.avgTurnaround)}h` : `${(m.avgTurnaround / 24).toFixed(1)}d`;
 
   const maxRoom = m.topRooms[0]?.n ?? 1;
   const maxDept = Math.max(1, ...m.byDept.map((d) => d.total));
   const maxPipe = Math.max(1, ...m.pipeline.map((p) => p.n));
 
   const stats = [
-    { label: 'Bookings', value: bookings, icon: 'ti-calendar', tint: 'var(--info)', to: '/calendar' },
-    { label: 'Pending approvals', value: pendingApprovals, icon: 'ti-clock-pause', tint: 'var(--warn)', to: '/calendar' },
-    { label: 'Open work', value: openWork, icon: 'ti-clipboard-list', tint: 'var(--green)', to: '/queue' },
+    { label: 'Bookings', value: m.bookings, icon: 'ti-calendar', tint: 'var(--info)', to: '/calendar' },
+    { label: 'Pending approvals', value: m.pendingApprovals, icon: 'ti-clock-pause', tint: 'var(--warn)', to: '/calendar' },
+    { label: 'Open work', value: m.openWork, icon: 'ti-clipboard-list', tint: 'var(--green)', to: '/queue' },
     { label: 'Active conflicts', value: conflicts, icon: 'ti-alert-triangle', tint: 'var(--warn)', to: '/calendar' },
   ];
 
@@ -98,6 +118,44 @@ export default function Insights() {
     <>
       <h1 className="page-h">Insights</h1>
       <div className="page-sub">How the campus is being used and how fast requests get resolved.</div>
+
+      {/* ---- Report controls: filter the window, scope to a department, export ---- */}
+      <div className="report-bar no-print">
+        <div className="seg seg-sm report-seg">
+          {RANGES.map((r) => (
+            <button key={r.key} className={range === r.key ? 'active' : ''} onClick={() => setRange(r.key)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <div className="report-chips">
+          {(['All', ...DEPTS] as const).map((d) => (
+            <button key={d} className={'chip' + (dept === d ? ' on' : '')} onClick={() => setDept(d)}>
+              {d}
+            </button>
+          ))}
+        </div>
+        <div className="report-actions">
+          <button className="btn-soft" onClick={() => exportCSV('bookings')}>
+            <i className="ti ti-calendar-down" /> Bookings CSV
+          </button>
+          <button className="btn-soft" onClick={() => exportCSV('work')}>
+            <i className="ti ti-clipboard-text" /> Work orders CSV
+          </button>
+          {user.site_admin && (db.rentals?.length ?? 0) > 0 && (
+            <button className="btn-soft" onClick={() => exportCSV('rentals')}>
+              <i className="ti ti-building-store" /> Rentals CSV
+            </button>
+          )}
+          <button className="btn-soft" onClick={() => window.print()}>
+            <i className="ti ti-printer" /> Print / PDF
+          </button>
+        </div>
+      </div>
+      <div className="page-sub" style={{ fontSize: 12.5, marginBottom: 4 }}>
+        Showing <b>{rangeLabel}</b>
+        {dept !== 'All' ? ` · ${dept}` : ''} — {m.bookings} bookings, {m.workTotal} work orders{user.site_admin ? `, ${m.fRentals.length} rentals` : ''}.
+      </div>
 
       <div className="ins-stats">
         {stats.map((s) => (
@@ -121,7 +179,7 @@ export default function Insights() {
         ))}
       </div>
       <div className="page-sub" style={{ marginTop: 8, fontSize: 12.5 }}>
-        {m.underused} of {db.rooms.length} rooms have 1 or fewer bookings — candidates to consolidate or promote.
+        {m.underused} of {db.rooms.length} rooms have 1 or fewer bookings in this window — candidates to consolidate or promote.
       </div>
 
       <div className="section-label" style={{ marginTop: 26 }}>
@@ -175,16 +233,14 @@ export default function Insights() {
             <span>Completion rate</span>
             <i className="ti ti-circle-check" style={{ color: 'var(--ok)' }} />
           </div>
-          <div className="ins-stat-num">
-            {db.workItems.length ? Math.round((db.workItems.filter((w) => w.status === 'Done').length / db.workItems.length) * 100) : 0}%
-          </div>
-          <div className="page-sub" style={{ fontSize: 12 }}>of all work items</div>
+          <div className="ins-stat-num">{m.workTotal ? Math.round((m.doneAll / m.workTotal) * 100) : 0}%</div>
+          <div className="page-sub" style={{ fontSize: 12 }}>of work items in window</div>
         </div>
       </div>
 
       {user.site_admin && (
         <button
-          className="space-row"
+          className="space-row no-print"
           style={{ marginTop: 22, border: '0.5px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface)' }}
           onClick={() => nav('/audit')}
         >
@@ -200,7 +256,7 @@ export default function Insights() {
       )}
 
       <div className="page-sub" style={{ marginTop: 18, fontSize: 12 }}>
-        Demo figures from seeded data. Production would add date-range filters and export.
+        Figures reflect the selected window. CSV exports the rows behind these charts; Print produces a PDF-ready report.
       </div>
       <div style={{ height: 20 }} />
     </>
