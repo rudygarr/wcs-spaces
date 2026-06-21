@@ -182,6 +182,23 @@ export default function Insights() {
         </div>
       </div>
 
+      {user.site_admin && (
+        <button
+          className="space-row"
+          style={{ marginTop: 22, border: '0.5px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface)' }}
+          onClick={() => nav('/audit')}
+        >
+          <span className="space-ico" style={{ background: 'var(--green-tint)', color: 'var(--green)' }}>
+            <i className="ti ti-history" />
+          </span>
+          <span className="nm" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span style={{ fontWeight: 550 }}>Activity log</span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Who changed what — bookings, rentals, work &amp; assets</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
       <div className="page-sub" style={{ marginTop: 18, fontSize: 12 }}>
         Demo figures from seeded data. Production would add date-range filters and export.
       </div>

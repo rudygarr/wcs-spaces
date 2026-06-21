@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -7,6 +7,21 @@ import { channelsFor } from './notify';
 
 function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// Who the audit trail attributes actions to. Kept in sync with the "view as"
+// session actor (see setAuditActor, called from SessionProvider) so store
+// mutations can stamp the right name without every call site passing it.
+let auditActor = 'System';
+export function setAuditActor(name: string) {
+  auditActor = name || 'System';
+}
+function auditEntry(e: Omit<AuditEntry, 'id' | 'at' | 'actor'>): AuditEntry {
+  // Demo-frame rule: stamp at the demo's "today", not real wall-clock.
+  return { ...e, id: uid('au'), at: DEMO_TODAY.toISOString(), actor: auditActor };
+}
+function withAudit(d: Database, e: Omit<AuditEntry, 'id' | 'at' | 'actor'>): Database {
+  return { ...d, audit: [...(d.audit ?? []), auditEntry(e)] };
 }
 
 interface StoreCtx {
@@ -38,6 +53,7 @@ interface StoreCtx {
   updateRental: (id: string, patch: Partial<Rental>) => void;
   confirmRental: (id: string) => void;
   cancelRental: (id: string) => void;
+  logAudit: (e: Omit<AuditEntry, 'id' | 'at' | 'actor'>) => void;
   reset: () => void;
 }
 
@@ -127,7 +143,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addEvent(e) {
       const ev: EventRec = { ...e, id: uid('e') };
-      commit((d) => ({ ...d, events: [...d.events, ev] }));
+      commit((d) => withAudit({ ...d, events: [...d.events, ev] }, { action: 'Created booking', entityType: 'booking', entityId: ev.id, entityLabel: ev.name, detail: ev.rooms?.length ? ev.rooms.join(', ') : undefined, link: `#/event/${ev.id}` }));
       return ev;
     },
     addEvents(list) {
@@ -142,17 +158,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // any prior release.
     checkInEvent(id) {
       const now = DEMO_TODAY.toISOString();
-      commit((d) => ({
-        ...d,
-        events: d.events.map((e) => (e.id === id ? { ...e, checkInAt: now, released: false } : e)),
-      }));
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === id);
+        const nd = { ...d, events: d.events.map((e) => (e.id === id ? { ...e, checkInAt: now, released: false } : e)) };
+        return ev ? withAudit(nd, { action: 'Checked in', entityType: 'booking', entityId: id, entityLabel: ev.name, link: `#/event/${id}` }) : nd;
+      });
     },
     // Reclaim a no-show's slot (frees room + stock). Reversible via restoreEvent.
     releaseEvent(id) {
-      commit((d) => ({ ...d, events: d.events.map((e) => (e.id === id ? { ...e, released: true } : e)) }));
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === id);
+        const nd = { ...d, events: d.events.map((e) => (e.id === id ? { ...e, released: true } : e)) };
+        return ev ? withAudit(nd, { action: 'Released slot', entityType: 'booking', entityId: id, entityLabel: ev.name, detail: 'No-show reclaim', link: `#/event/${id}` }) : nd;
+      });
     },
     restoreEvent(id) {
-      commit((d) => ({ ...d, events: d.events.map((e) => (e.id === id ? { ...e, released: false } : e)) }));
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === id);
+        const nd = { ...d, events: d.events.map((e) => (e.id === id ? { ...e, released: false } : e)) };
+        return ev ? withAudit(nd, { action: 'Restored booking', entityType: 'booking', entityId: id, entityLabel: ev.name, link: `#/event/${id}` }) : nd;
+      });
     },
     reassignOwner(fromName, toName) {
       commit((d) => ({
@@ -166,16 +191,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return item;
     },
     updateWorkItem(id, patch) {
-      commit((d) => ({
-        ...d,
-        workItems: d.workItems.map((w) => {
-          if (w.id !== id) return w;
-          const next = { ...w, ...patch };
-          // Stamp the moment a job first reaches Done, for turnaround reporting.
-          if (next.status === 'Done' && !next.completedAt) next.completedAt = new Date().toISOString();
-          return next;
-        }),
-      }));
+      commit((d) => {
+        const prev = d.workItems.find((w) => w.id === id);
+        let nd: Database = {
+          ...d,
+          workItems: d.workItems.map((w) => {
+            if (w.id !== id) return w;
+            const next = { ...w, ...patch };
+            // Stamp the moment a job first reaches Done, for turnaround reporting.
+            if (next.status === 'Done' && !next.completedAt) next.completedAt = new Date().toISOString();
+            return next;
+          }),
+        };
+        // Audit the meaningful transitions: status changes and (re)assignment.
+        if (prev) {
+          if (patch.status && patch.status !== prev.status) {
+            nd = withAudit(nd, { action: `Marked ${patch.status}`, entityType: 'work', entityId: id, entityLabel: prev.title, detail: `${prev.status} → ${patch.status}`, link: `#/work/${id}` });
+          }
+          if (patch.assignee !== undefined && patch.assignee !== prev.assignee) {
+            nd = withAudit(nd, { action: patch.assignee ? 'Assigned work' : 'Unassigned work', entityType: 'work', entityId: id, entityLabel: prev.title, detail: patch.assignee ? `to ${patch.assignee}` : undefined, link: `#/work/${id}` });
+          }
+        }
+        return nd;
+      });
     },
     addDriver(dr) {
       const driver: Driver = { ...dr, id: uid('drv'), active: true };
@@ -216,7 +254,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addConflictNote(n) {
       const note: ConflictNote = { ...n, id: uid('cn'), at: new Date().toISOString() };
-      commit((d) => ({ ...d, conflictNotes: [...(d.conflictNotes ?? []), note] }));
+      commit((d) => {
+        const nd = { ...d, conflictNotes: [...(d.conflictNotes ?? []), note] };
+        // Only the resolving "accept" is audit-worthy; ordinary talk isn't.
+        return note.kind === 'accept' ? withAudit(nd, { action: 'Accepted overlap', entityType: 'conflict', entityLabel: 'Shared / accepted double-booking', detail: note.body || undefined }) : nd;
+      });
     },
     addAsset(a) {
       const asset: Asset = { ...a, id: uid('as') };
@@ -229,22 +271,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     logService(id, by, note) {
       // Stamp at the demo's "today" so logging service clears the PM in-frame.
       const now = DEMO_TODAY.toISOString();
-      commit((d) => ({
-        ...d,
-        assets: (d.assets ?? []).map((a) =>
-          a.id === id
-            ? { ...a, lastServiceAt: now, serviceLog: [{ at: now, by, note }, ...(a.serviceLog ?? [])] }
-            : a,
-        ),
-      }));
+      commit((d) => {
+        const asset = (d.assets ?? []).find((a) => a.id === id);
+        const nd = {
+          ...d,
+          assets: (d.assets ?? []).map((a) =>
+            a.id === id
+              ? { ...a, lastServiceAt: now, serviceLog: [{ at: now, by, note }, ...(a.serviceLog ?? [])] }
+              : a,
+          ),
+        };
+        return asset ? withAudit(nd, { action: 'Logged service', entityType: 'asset', entityId: id, entityLabel: `${asset.code} · ${asset.name}`, detail: note || undefined, link: `#/asset/${id}` }) : nd;
+      });
     },
     addRental(r) {
       const rental: Rental = { ...r, id: uid('rent'), createdAt: DEMO_TODAY.toISOString() };
-      commit((d) => ({ ...d, rentals: [...(d.rentals ?? []), rental] }));
+      commit((d) => withAudit({ ...d, rentals: [...(d.rentals ?? []), rental] }, { action: 'New rental inquiry', entityType: 'rental', entityId: rental.id, entityLabel: rental.org, detail: `${rental.room} · ${rental.purpose}`, link: `#/rental/${rental.id}` }));
       return rental;
     },
     updateRental(id, patch) {
-      commit((d) => ({ ...d, rentals: (d.rentals ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
+      commit((d) => {
+        const prev = (d.rentals ?? []).find((r) => r.id === id);
+        let nd: Database = { ...d, rentals: (d.rentals ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) };
+        if (prev) {
+          // Audit the gate flips — COI, deposit, invoice — and explicit status moves.
+          const gates: { key: 'coi' | 'depositStatus' | 'invoiceStatus'; label: string }[] = [
+            { key: 'coi', label: 'COI' },
+            { key: 'depositStatus', label: 'Deposit' },
+            { key: 'invoiceStatus', label: 'Invoice' },
+          ];
+          for (const g of gates) {
+            if (patch[g.key] !== undefined && patch[g.key] !== prev[g.key]) {
+              nd = withAudit(nd, { action: `${g.label}: ${patch[g.key]}`, entityType: 'rental', entityId: id, entityLabel: prev.org, detail: `${prev[g.key]} → ${patch[g.key]}`, link: `#/rental/${id}` });
+            }
+          }
+          if (patch.status && patch.status !== prev.status) {
+            nd = withAudit(nd, { action: `Marked ${patch.status}`, entityType: 'rental', entityId: id, entityLabel: prev.org, detail: `${prev.status} → ${patch.status}`, link: `#/rental/${id}` });
+          }
+        }
+        return nd;
+      });
     },
     // Confirm a rental: put it on the calendar (create the linked event if needed,
     // or un-release a previously cancelled one) and mark it Confirmed.
@@ -260,11 +326,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           eventId = uid('rent-evt');
           events = [...events, rentalEvent(r, eventId)];
         }
-        return {
+        const nd = {
           ...d,
           events,
-          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Confirmed', eventId } : x)),
+          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Confirmed' as const, eventId } : x)),
         };
+        return withAudit(nd, { action: 'Confirmed rental', entityType: 'rental', entityId: id, entityLabel: r.org, detail: 'Added to calendar', link: `#/rental/${id}` });
       });
     },
     // Cancel: free the room by releasing the linked event (reversible — confirming
@@ -272,15 +339,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     cancelRental(id) {
       commit((d) => {
         const r = (d.rentals ?? []).find((x) => x.id === id);
-        const events = r?.eventId
+        if (!r) return d;
+        const events = r.eventId
           ? d.events.map((e) => (e.id === r.eventId ? { ...e, released: true } : e))
           : d.events;
-        return {
+        const nd = {
           ...d,
           events,
-          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Cancelled' } : x)),
+          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Cancelled' as const } : x)),
         };
+        return withAudit(nd, { action: 'Cancelled rental', entityType: 'rental', entityId: id, entityLabel: r.org, detail: 'Released the space', link: `#/rental/${id}` });
       });
+    },
+    logAudit(e) {
+      commit((d) => withAudit(d, e));
     },
     reset() {
       void clearDB();

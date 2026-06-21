@@ -8,12 +8,13 @@ import { conflictKey, isConflictResolved } from '../lib/conflicts';
 import { buildICS, downloadICS, slug } from '../lib/ics';
 import { ConflictThread } from '../components/ConflictThread';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
+import AuditHistory from '../components/AuditHistory';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
 export default function EventDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent } = useStore();
+  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit } = useStore();
   const { user } = useSession();
   const ev = db.events.find((e) => e.id === id);
 
@@ -71,6 +72,14 @@ export default function EventDetail() {
     });
     const overall = derivedStatus(recomputed, decision);
     updateEvent(ev.id, { approvals: next, status: overall, percent_approved: overall === 'Approved' ? 100 : 0 });
+    logAudit({
+      action: decision === 'Approved' ? 'Approved booking' : 'Declined booking',
+      entityType: 'approval',
+      entityId: ev.id,
+      entityLabel: ev.name,
+      detail: myPending.map((s) => s.area).join(', ') || undefined,
+      link: `#/event/${ev.id}`,
+    });
   }
 
   return (
@@ -387,6 +396,7 @@ export default function EventDetail() {
           <i className="ti ti-rotate" /> Reset to pending
         </button>
       )}
+      <AuditHistory entityId={ev.id} />
       <div style={{ height: 20 }} />
     </>
   );

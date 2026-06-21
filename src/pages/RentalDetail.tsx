@@ -3,6 +3,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtDateLong } from '../lib/data';
 import { STATUS_META, COI_LABEL, PAY_LABEL, money, outstanding, readyToConfirm } from '../lib/rentals';
+import AuditHistory from '../components/AuditHistory';
 import type { CoiStatus, PayStatus } from '../lib/types';
 
 // A compact status row with record-only action buttons. No amounts are charged —
@@ -160,6 +161,7 @@ export default function RentalDetail() {
           <i className="ti ti-alert-triangle" /> No certificate of insurance on file yet — you can still confirm, but most rentals shouldn't go on the calendar without it.
         </div>
       )}
+      <AuditHistory entityId={r.id} />
       <div style={{ height: 20 }} />
     </>
   );

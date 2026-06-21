@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { buildSeed } from './seed';
+import { setAuditActor } from './store';
 import type { PersonRec } from './types';
 
 // Fakes auth for the demo: pick any staff member and the whole app
@@ -14,9 +15,17 @@ const Ctx = createContext<SessionCtx | null>(null);
 const seedPeople = buildSeed().people;
 const defaultUser = seedPeople.find((p) => p.name === 'Rudy Garrido') ?? seedPeople[0];
 
+// Keep the audit trail's actor in lock-step with the "view as" user, so store
+// mutations attribute changes to whoever's currently signed in.
+setAuditActor(defaultUser.name);
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PersonRec>(defaultUser);
-  return <Ctx.Provider value={{ user, setUser }}>{children}</Ctx.Provider>;
+  const switchUser = (p: PersonRec) => {
+    setAuditActor(p.name);
+    setUser(p);
+  };
+  return <Ctx.Provider value={{ user, setUser: switchUser }}>{children}</Ctx.Provider>;
 }
 
 export function useSession(): SessionCtx {

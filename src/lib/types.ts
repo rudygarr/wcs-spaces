@@ -204,6 +204,25 @@ export interface Rental {
   createdAt: string;
 }
 
+// ---- Audit trail (item R) ----
+// An append-only record of who did what. Every consequential action — a booking
+// approved, a rental confirmed, a no-show released, an invoice marked paid — drops
+// one entry here so admins can answer "who changed this, and when?". Demo-grade
+// (client-side, tied to the "view as" actor); production would write server-side
+// and be tamper-evident.
+export type AuditEntityType = 'booking' | 'rental' | 'work' | 'asset' | 'approval' | 'conflict' | 'system';
+export interface AuditEntry {
+  id: string;
+  at: string; // ISO timestamp
+  actor: string; // who did it (the acting user)
+  action: string; // short verb phrase, e.g. 'Confirmed rental'
+  entityType: AuditEntityType;
+  entityId?: string;
+  entityLabel: string; // the thing acted on
+  detail?: string; // extra context (old → new, amount, etc.)
+  link?: string; // hash route to the entity
+}
+
 // A saved request template — prefills a request door so common events are one tap.
 export interface Template {
   id: string;
@@ -287,6 +306,7 @@ export interface Database {
   conflictNotes?: ConflictNote[];
   assets?: Asset[];
   rentals?: Rental[];
+  audit?: AuditEntry[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

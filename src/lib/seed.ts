@@ -5,12 +5,12 @@ import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import { seedAssets } from '../data/assets';
-import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental } from './types';
+import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 17;
+export const SEED_VERSION = 18;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -364,6 +364,23 @@ function seedConflictNotes(): ConflictNote[] {
   ];
 }
 
+// A few days of prior history so the audit trail reads as a living ledger on
+// first load, not an empty page. Timestamps sit in the days before DEMO_TODAY
+// (2026-08-20T16:00Z) and reference real seeded records so the links resolve.
+function seedAudit(): AuditEntry[] {
+  return [
+    { id: 'au-1', at: '2026-08-13T18:22:00Z', actor: 'Rudy Garrido', action: 'New rental inquiry', entityType: 'rental', entityId: 'rent-1', entityLabel: 'Grace Community Church', detail: 'Beacon Hall · Sunday services', link: '#/rental/rent-1' },
+    { id: 'au-2', at: '2026-08-14T15:05:00Z', actor: 'Rudy Garrido', action: 'COI: received', entityType: 'rental', entityId: 'rent-1', entityLabel: 'Grace Community Church', detail: 'pending → received', link: '#/rental/rent-1' },
+    { id: 'au-3', at: '2026-08-14T15:06:00Z', actor: 'Rudy Garrido', action: 'Confirmed rental', entityType: 'rental', entityId: 'rent-1', entityLabel: 'Grace Community Church', detail: 'Added to calendar', link: '#/rental/rent-1' },
+    { id: 'au-4', at: '2026-08-17T13:40:00Z', actor: 'Vicki Kaplan', action: 'Approved booking', entityType: 'approval', entityId: 'e-ci-open', entityLabel: 'Admissions Family Tour', detail: 'Administration', link: '#/event/e-ci-open' },
+    { id: 'au-5', at: '2026-08-18T14:12:00Z', actor: 'Daniel Pérez', action: 'Marked In progress', entityType: 'work', entityId: 'w-m3', entityLabel: 'Room 204 AC not cooling', detail: 'Assigned → In progress', link: '#/work/w-m3' },
+    { id: 'au-6', at: '2026-08-18T20:35:00Z', actor: 'Carlos Rivera', action: 'Logged service', entityType: 'asset', entityId: 'as-1', entityLabel: 'WCS-HVAC-001 · Gym Rooftop Unit RTU-1', detail: 'Replaced return-air filter', link: '#/asset/as-1' },
+    { id: 'au-7', at: '2026-08-19T16:48:00Z', actor: 'Vicki Kaplan', action: 'Accepted overlap', entityType: 'conflict', entityLabel: 'Shared / accepted double-booking', detail: 'Theater shared — dance holds the stage, bee takes the house' },
+    { id: 'au-8', at: '2026-08-20T12:30:00Z', actor: 'Rudy Garrido', action: 'Invoice: invoiced', entityType: 'rental', entityId: 'rent-1', entityLabel: 'Grace Community Church', detail: 'unpaid → invoiced', link: '#/rental/rent-1' },
+    { id: 'au-9', at: '2026-08-20T13:15:00Z', actor: 'Carl Joseph', action: 'Checked in', entityType: 'booking', entityId: 'e-ci-in', entityLabel: 'Chapel Rehearsal', link: '#/event/e-ci-in' },
+  ];
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -409,6 +426,7 @@ export function buildSeed(): Database {
     conflictNotes: seedConflictNotes(),
     assets: seedAssets,
     rentals: rentalsSeed.rentals,
+    audit: seedAudit(),
     seedVersion: SEED_VERSION,
   };
 }
