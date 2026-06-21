@@ -7,6 +7,7 @@ import { assignedToMe } from '../lib/fulfill';
 import { allConflicts, CONFLICT_ICON } from '../lib/conflicts';
 import { pendingForApprover } from '../lib/approvals';
 import { pmDueCount } from '../lib/assets';
+import { checkinState } from '../lib/checkin';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -26,7 +27,7 @@ function greet(): string {
 export default function Home() {
   const nav = useNavigate();
   const { user } = useSession();
-  const { db } = useStore();
+  const { db, checkInEvent } = useStore();
   const [view, setView] = useState<'mine' | 'school'>('mine');
   const today = eventsOnDay(db.events, DEMO_TODAY);
   const mine = today.filter((e) => isMine(e, user.name));
@@ -42,6 +43,11 @@ export default function Home() {
   const myApprovals = pendingForApprover(db, user.name).length;
   const canSeePM = user.site_admin || user.department === 'Maintenance';
   const pmDue = pmDueCount(db);
+  // Check-in: my bookings happening now that still need confirmation.
+  const myCheckins = mine.filter((e) => e.owner === user.name && checkinState(e, DEMO_TODAY) === 'open');
+  // No-shows today an admin/resolver can reclaim.
+  const canManageNoShows = user.site_admin || user.resolves_conflicts;
+  const noShows = today.filter((e) => checkinState(e, DEMO_TODAY) === 'noshow');
   const deptQueues = [
     { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
     { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
@@ -86,6 +92,44 @@ export default function Home() {
             </button>
           )}
         </div>
+      )}
+
+      {myCheckins.length > 0 && (
+        <div className="ci-card ci-open" style={{ marginTop: 0, marginBottom: 16 }}>
+          <button
+            className="ci-text"
+            onClick={() => nav('/event/' + myCheckins[0].id)}
+            style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0 }}
+          >
+            <span className="ci-title"><i className="ti ti-map-pin-check" /> Check in to your space</span>
+            <span className="ci-sub">
+              {myCheckins[0].name} · {fmtTime(myCheckins[0].starts_at)}
+              {myCheckins.length > 1 ? ` · +${myCheckins.length - 1} more` : ''}
+            </span>
+          </button>
+          <button className="ci-btn ci-btn-go" onClick={() => checkInEvent(myCheckins[0].id)}>
+            <i className="ti ti-check" /> Check in
+          </button>
+        </div>
+      )}
+
+      {canManageNoShows && noShows.length > 0 && (
+        <button
+          className="row"
+          onClick={() => nav(noShows.length === 1 ? '/event/' + noShows[0].id : '/calendar')}
+          style={{ width: '100%', background: 'var(--warn-tint)', border: '0.5px solid var(--warn)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-ath" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0, background: 'var(--warn)' }}>
+            <i className="ti ti-user-x" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--warn)' }}>No-shows today</span>
+            <span className="sub">
+              {noShows.length} booking{noShows.length === 1 ? '' : 's'} with no check-in — reclaim the slot{noShows.length === 1 ? '' : 's'}
+            </span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
       )}
 
       <div className="tiles" style={{ marginBottom: 30 }}>

@@ -44,6 +44,13 @@ export interface WcsEvent {
   resourceQty?: Record<string, number>;
   // Expected headcount — checked against room capacity at booking time (soft).
   expectedAttendance?: number;
+  // Occupancy confirmation (see lib/checkin). `checkInAt` is stamped when someone
+  // confirms the space is actually in use; if nobody checks in within the grace
+  // window the booking reads as a no-show and the slot can be released (reclaimed).
+  // `released` frees the room/stock back up — true to the soft philosophy, it's a
+  // reversible reclaim, never a punishment.
+  checkInAt?: string;
+  released?: boolean;
 }
 
 export interface ApprovalRec {

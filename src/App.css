@@ -1490,6 +1490,84 @@
   margin-top: 6px;
 }
 
+/* Check-in / no-show release card */
+.ci-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  border: 0.5px solid var(--border);
+  background: var(--surface);
+}
+.ci-text {
+  flex: 1;
+  min-width: 0;
+}
+.ci-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ci-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.ci-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ci-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r-sm);
+  border: 0.5px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.ci-btn-go {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.ci-btn-release {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #fff;
+}
+.ci-open {
+  border-color: var(--info);
+  background: var(--info-tint);
+}
+.ci-in {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.ci-noshow {
+  border-color: var(--warn);
+  background: var(--warn-tint);
+}
+.ci-released {
+  background: var(--surface-2);
+}
+.ci-released .ci-title {
+  color: var(--text-2);
+}
+
 /* Trip double-booking: flag, never block (accept to resolve) */
 .conflict-warn {
   margin-top: 10px;

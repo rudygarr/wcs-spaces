@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 14;
+export const SEED_VERSION = 15;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -98,6 +98,7 @@ function seedInventoryDemand(): EventRec[] {
       resourceQty: { 'Chairs': 120, 'Table (round)': 12 },
       starts_at: '2026-08-20T15:00:00.000Z', // 11am EDT
       ends_at: '2026-08-20T17:00:00.000Z',
+      checkInAt: '2026-08-20T15:02:00.000Z', // confirmed — keeps this an inventory demo, not a no-show
       details: 'Reception for newly enrolled families.',
     },
     // Buffer-only clash in the Gym on DEMO_TODAY: practice ends 10:00 but tears
@@ -130,6 +131,61 @@ function seedInventoryDemand(): EventRec[] {
       starts_at: '2026-08-20T14:30:00.000Z', // 10:30 EDT
       ends_at: '2026-08-20T16:00:00.000Z', // 12:00 EDT
       details: 'Needs the floor set before students arrive.',
+    },
+  ];
+}
+
+// Three bookings on DEMO_TODAY (noon EDT) that show the check-in lifecycle:
+// one awaiting confirmation (owned by the default demo user, so the Home
+// check-in card shows), one already checked in, and one no-show the admin can
+// reclaim. See lib/checkin.
+function seedCheckinDemo(): EventRec[] {
+  const base = {
+    all_day: false,
+    setup_starts: null,
+    teardown_ends: null,
+    recurrence: null,
+    percent_approved: 100,
+    status: 'Approved',
+    source: 'internal' as const,
+    kind: 'booking' as const,
+    resources: [],
+  };
+  return [
+    {
+      ...base,
+      id: 'e-ci-open',
+      name: 'Admissions Family Tour',
+      owner: 'Rudy Garrido',
+      location: 'TIDE Conference Room',
+      rooms: ['TIDE Conference Room'],
+      starts_at: '2026-08-20T16:00:00.000Z', // 12:00 EDT — check-in window open now
+      ends_at: '2026-08-20T17:00:00.000Z',
+      expectedAttendance: 8,
+      details: 'Walkthrough for a prospective family.',
+    },
+    {
+      ...base,
+      id: 'e-ci-in',
+      name: 'Chapel Rehearsal',
+      owner: 'Adriana Marrero',
+      location: 'Lighthouse Theater',
+      rooms: ['Lighthouse Theater'],
+      starts_at: '2026-08-20T15:30:00.000Z', // 11:30 EDT
+      ends_at: '2026-08-20T16:30:00.000Z',
+      checkInAt: '2026-08-20T15:33:00.000Z', // confirmed on time
+      details: 'Worship team run-through.',
+    },
+    {
+      ...base,
+      id: 'e-ci-noshow',
+      name: 'Parent Volunteer Meeting',
+      owner: 'Vicki Kaplan',
+      location: 'Green Room',
+      rooms: ['Green Room'],
+      starts_at: '2026-08-20T15:30:00.000Z', // 11:30 EDT — past grace, still in window now
+      ends_at: '2026-08-20T17:00:00.000Z', // 1:00 EDT
+      details: 'No one checked in — slot can be reclaimed.',
     },
   ];
 }
@@ -231,7 +287,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand()],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo()],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,

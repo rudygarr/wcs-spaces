@@ -1,7 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { fmtTime, fmtDateLong, statusColor, findConflicts } from '../lib/data';
+import { fmtTime, fmtDateLong, statusColor, findConflicts, DEMO_TODAY } from '../lib/data';
+import { checkinState, NOSHOW_GRACE_MIN } from '../lib/checkin';
 import { approvalSteps, derivedStatus, canApprove as canApproveEvent } from '../lib/approvals';
 import { conflictKey, isConflictResolved } from '../lib/conflicts';
 import { buildICS, downloadICS, slug } from '../lib/ics';
@@ -12,7 +13,7 @@ import type { ApprovalRec, EventRec } from '../lib/types';
 export default function EventDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateEvent } = useStore();
+  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent } = useStore();
   const { user } = useSession();
   const ev = db.events.find((e) => e.id === id);
 
@@ -48,6 +49,11 @@ export default function EventDetail() {
   const isOverride = user.site_admin || user.resolves_conflicts;
   const pendingSteps = steps.filter((s) => s.status === 'Pending');
   const myPending = isOverride ? pendingSteps : pendingSteps.filter((s) => s.approver === user.name);
+
+  // Check-in / no-show release. Owner or an admin/resolver can confirm use or
+  // reclaim the slot.
+  const ciState = checkinState(ev, DEMO_TODAY);
+  const canManageCheckin = isOverride || ev.owner === user.name;
 
   function act(decision: 'Approved' | 'Declined') {
     if (!ev) return;
@@ -210,6 +216,62 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {ciState === 'open' && (
+        <div className="ci-card ci-open">
+          <div className="ci-text">
+            <span className="ci-title"><i className="ti ti-map-pin-check" /> Using this space?</span>
+            <span className="ci-sub">Confirm check-in so the room isn't flagged as a no-show.</span>
+          </div>
+          {canManageCheckin && (
+            <button className="ci-btn ci-btn-go" onClick={() => checkInEvent(ev.id)}>
+              <i className="ti ti-check" /> Check in
+            </button>
+          )}
+        </div>
+      )}
+      {ciState === 'in' && (
+        <div className="ci-card ci-in">
+          <div className="ci-text">
+            <span className="ci-title"><i className="ti ti-circle-check" /> Checked in</span>
+            <span className="ci-sub">Confirmed at {fmtTime(ev.checkInAt!)} — the space is in use.</span>
+          </div>
+        </div>
+      )}
+      {ciState === 'noshow' && (
+        <div className="ci-card ci-noshow">
+          <div className="ci-text">
+            <span className="ci-title"><i className="ti ti-alert-triangle" /> No check-in</span>
+            <span className="ci-sub">
+              No one confirmed within {NOSHOW_GRACE_MIN} min of start. Release the slot to free the room, or check in if
+              it's running.
+            </span>
+          </div>
+          {canManageCheckin && (
+            <div className="ci-actions">
+              <button className="ci-btn ci-btn-go" onClick={() => checkInEvent(ev.id)}>
+                <i className="ti ti-check" /> Check in
+              </button>
+              <button className="ci-btn ci-btn-release" onClick={() => releaseEvent(ev.id)}>
+                <i className="ti ti-arrow-back-up" /> Release slot
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {ciState === 'released' && (
+        <div className="ci-card ci-released">
+          <div className="ci-text">
+            <span className="ci-title"><i className="ti ti-lock-open" /> Slot released</span>
+            <span className="ci-sub">Reclaimed as a no-show — the room is free again.</span>
+          </div>
+          {canManageCheckin && (
+            <button className="ci-btn" onClick={() => restoreEvent(ev.id)}>
+              <i className="ti ti-rotate" /> Restore booking
+            </button>
+          )}
+        </div>
+      )}
 
       {ev.starts_at && (
         <button

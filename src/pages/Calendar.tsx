@@ -14,6 +14,7 @@ import {
   isMine,
 } from '../lib/data';
 import { blackoutForDate } from '../lib/calendar';
+import { checkinState } from '../lib/checkin';
 import { buildICS, downloadICS } from '../lib/ics';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
@@ -140,6 +141,7 @@ export default function Calendar() {
         {list.map((e, i) => {
           const conflicted = conflicts.some((c) => c.a === e || c.b === e);
           const notice = e.kind === 'notice';
+          const ci = checkinState(e, DEMO_TODAY);
           return (
             <div key={e.id}>
               {i > 0 && <div className="divider" />}
@@ -159,8 +161,23 @@ export default function Calendar() {
                   style={{ background: conflicted ? 'var(--warn)' : notice ? 'var(--info)' : statusColor(e.status) }}
                 />
                 <span className="body">
-                  <span className="title" style={conflicted ? { color: 'var(--warn)' } : undefined}>
+                  <span
+                    className="title"
+                    style={
+                      conflicted
+                        ? { color: 'var(--warn)' }
+                        : ci === 'released'
+                          ? { color: 'var(--text-3)', textDecoration: 'line-through' }
+                          : undefined
+                    }
+                  >
                     {conflicted && <i className="ti ti-alert-triangle" style={{ fontSize: 14, marginRight: 4 }} />}
+                    {!conflicted && ci === 'in' && (
+                      <i className="ti ti-circle-check" style={{ fontSize: 14, marginRight: 4, color: 'var(--ok)' }} />
+                    )}
+                    {!conflicted && ci === 'noshow' && (
+                      <i className="ti ti-user-x" style={{ fontSize: 14, marginRight: 4, color: 'var(--warn)' }} />
+                    )}
                     {e.name}
                   </span>
                   <span className="sub">
@@ -188,11 +205,35 @@ export default function Calendar() {
                       ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
                       : notice
                         ? 'color-mix(in srgb, var(--info) 14%, transparent)'
-                        : 'var(--surface-2)',
-                    color: conflicted ? 'var(--warn)' : notice ? 'var(--info)' : statusColor(e.status),
+                        : ci === 'noshow'
+                          ? 'color-mix(in srgb, var(--warn) 16%, transparent)'
+                          : ci === 'in'
+                            ? 'color-mix(in srgb, var(--ok) 16%, transparent)'
+                            : 'var(--surface-2)',
+                    color: conflicted
+                      ? 'var(--warn)'
+                      : notice
+                        ? 'var(--info)'
+                        : ci === 'noshow'
+                          ? 'var(--warn)'
+                          : ci === 'in'
+                            ? 'var(--ok)'
+                            : ci === 'released'
+                              ? 'var(--text-3)'
+                              : statusColor(e.status),
                   }}
                 >
-                  {conflicted ? 'Conflict' : notice ? 'FYI' : e.status}
+                  {conflicted
+                    ? 'Conflict'
+                    : notice
+                      ? 'FYI'
+                      : ci === 'noshow'
+                        ? 'No-show'
+                        : ci === 'in'
+                          ? 'Checked in'
+                          : ci === 'released'
+                            ? 'Released'
+                            : e.status}
                 </span>
               </button>
             </div>
