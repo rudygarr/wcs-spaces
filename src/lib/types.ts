@@ -169,6 +169,41 @@ export interface Driver {
   active?: boolean;
 }
 
+// ---- External facility rentals (item N) ----
+// WCS rents space to outside groups (churches, leagues, community orgs). This is
+// the admin-side ledger: track the booking plus the three things that gate it —
+// certificate of insurance, deposit, and the final invoice. The app only RECORDS
+// these (received / paid); it never takes a card or moves money (payment entry
+// stays prohibited in the demo — admins reconcile against the school's real
+// system). A confirmed rental spawns a calendar event so it conflict-checks and
+// draws down inventory like any internal booking.
+export type RentalStatus = 'Inquiry' | 'Tentative' | 'Confirmed' | 'Completed' | 'Cancelled';
+export type CoiStatus = 'pending' | 'received' | 'waived';
+export type PayStatus = 'unpaid' | 'invoiced' | 'paid' | 'waived';
+
+export interface Rental {
+  id: string;
+  org: string; // renting organization
+  contact: string; // their point of contact
+  email?: string;
+  phone?: string;
+  purpose: string; // what the event is
+  room: string; // the space they're renting
+  date: string; // ISO date (day)
+  startTime?: string; // HH:MM
+  endTime?: string; // HH:MM
+  attendance?: number;
+  status: RentalStatus;
+  fee: number; // total rental fee the office quoted
+  deposit: number; // refundable deposit required
+  coi: CoiStatus; // certificate of insurance on file?
+  depositStatus: PayStatus;
+  invoiceStatus: PayStatus;
+  notes?: string;
+  eventId?: string; // linked calendar event once Confirmed
+  createdAt: string;
+}
+
 // A saved request template — prefills a request door so common events are one tap.
 export interface Template {
   id: string;
@@ -251,6 +286,7 @@ export interface Database {
   notifications: Notif[];
   conflictNotes?: ConflictNote[];
   assets?: Asset[];
+  rentals?: Rental[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

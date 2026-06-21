@@ -20,6 +20,8 @@ import Insights from './pages/Insights';
 import Approvals from './pages/Approvals';
 import Assets from './pages/Assets';
 import AssetDetail from './pages/AssetDetail';
+import Rentals from './pages/Rentals';
+import RentalDetail from './pages/RentalDetail';
 import './App.css';
 
 export default function App() {
@@ -43,6 +45,8 @@ export default function App() {
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/assets" element={<Assets />} />
               <Route path="/asset/:id" element={<AssetDetail />} />
+              <Route path="/rentals" element={<Rentals />} />
+              <Route path="/rental/:id" element={<RentalDetail />} />
               <Route path="/work/:id" element={<WorkDetail />} />
               <Route path="/book" element={<Book />} />
               <Route path="/room/:id" element={<RoomDetail />} />

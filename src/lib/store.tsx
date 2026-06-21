@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -34,7 +34,39 @@ interface StoreCtx {
   addAsset: (a: Omit<Asset, 'id'>) => Asset;
   updateAsset: (id: string, patch: Partial<Asset>) => void;
   logService: (id: string, by: string, note?: string) => void;
+  addRental: (r: Omit<Rental, 'id' | 'createdAt'>) => Rental;
+  updateRental: (id: string, patch: Partial<Rental>) => void;
+  confirmRental: (id: string) => void;
+  cancelRental: (id: string) => void;
   reset: () => void;
+}
+
+// A confirmed rental shows up on the master calendar as a real (external)
+// booking, so it conflict-checks and draws down rooms like anything else.
+function rentalEvent(r: Rental, id: string): EventRec {
+  const starts = r.startTime ? `${r.date}T${r.startTime}:00-04:00` : `${r.date}T00:00:00-04:00`;
+  const ends = r.endTime ? `${r.date}T${r.endTime}:00-04:00` : starts;
+  return {
+    name: `${r.purpose} (${r.org})`,
+    starts_at: starts,
+    ends_at: ends,
+    all_day: !r.startTime,
+    setup_starts: null,
+    teardown_ends: null,
+    recurrence: null,
+    location: r.room,
+    owner: r.org,
+    status: 'Approved',
+    percent_approved: 100,
+    details: `External rental — ${r.org}. Contact: ${r.contact}.`,
+    rooms: [r.room],
+    resources: [],
+    source: 'internal',
+    category: 'Rental',
+    kind: 'booking',
+    expectedAttendance: r.attendance,
+    id,
+  };
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
@@ -205,6 +237,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : a,
         ),
       }));
+    },
+    addRental(r) {
+      const rental: Rental = { ...r, id: uid('rent'), createdAt: DEMO_TODAY.toISOString() };
+      commit((d) => ({ ...d, rentals: [...(d.rentals ?? []), rental] }));
+      return rental;
+    },
+    updateRental(id, patch) {
+      commit((d) => ({ ...d, rentals: (d.rentals ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
+    },
+    // Confirm a rental: put it on the calendar (create the linked event if needed,
+    // or un-release a previously cancelled one) and mark it Confirmed.
+    confirmRental(id) {
+      commit((d) => {
+        const r = (d.rentals ?? []).find((x) => x.id === id);
+        if (!r) return d;
+        let events = d.events;
+        let eventId = r.eventId;
+        if (eventId && events.some((e) => e.id === eventId)) {
+          events = events.map((e) => (e.id === eventId ? { ...e, released: false } : e));
+        } else {
+          eventId = uid('rent-evt');
+          events = [...events, rentalEvent(r, eventId)];
+        }
+        return {
+          ...d,
+          events,
+          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Confirmed', eventId } : x)),
+        };
+      });
+    },
+    // Cancel: free the room by releasing the linked event (reversible — confirming
+    // again restores it), and mark the rental Cancelled.
+    cancelRental(id) {
+      commit((d) => {
+        const r = (d.rentals ?? []).find((x) => x.id === id);
+        const events = r?.eventId
+          ? d.events.map((e) => (e.id === r.eventId ? { ...e, released: true } : e))
+          : d.events;
+        return {
+          ...d,
+          events,
+          rentals: (d.rentals ?? []).map((x) => (x.id === id ? { ...x, status: 'Cancelled' } : x)),
+        };
+      });
     },
     reset() {
       void clearDB();

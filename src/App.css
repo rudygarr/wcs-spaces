@@ -190,6 +190,108 @@
   background: color-mix(in srgb, var(--gold) 18%, transparent);
   color: var(--gold);
 }
+.t-rental {
+  background: var(--green-tint);
+  color: var(--green);
+}
+
+/* ---- Facility rentals (item N) ---- */
+.rent-summary {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+.rent-summary > div {
+  flex: 1;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 13px 15px;
+}
+.rent-sum-num {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.rent-sum-lbl {
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.rent-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--warn-tint);
+  color: var(--warn);
+  font-size: 13px;
+}
+.gate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gate-row {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+.gate-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.gate-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14.5px;
+  font-weight: 550;
+}
+.gate-label i {
+  color: var(--text-3);
+}
+.gate-val {
+  font-size: 13px;
+  font-weight: 600;
+}
+.gate-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.gate-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.gate-btn.soft {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.gate-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-3);
+  padding: 4px 2px;
+}
+.gate-note i {
+  margin-top: 1px;
+}
 
 .section-label {
   display: flex;

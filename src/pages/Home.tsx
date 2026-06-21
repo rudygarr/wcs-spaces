@@ -8,6 +8,7 @@ import { allConflicts, CONFLICT_ICON } from '../lib/conflicts';
 import { pendingForApprover } from '../lib/approvals';
 import { pmDueCount } from '../lib/assets';
 import { checkinState } from '../lib/checkin';
+import { rentalFollowups, uncollectedTotal, money } from '../lib/rentals';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -48,6 +49,9 @@ export default function Home() {
   // No-shows today an admin/resolver can reclaim.
   const canManageNoShows = user.site_admin || user.resolves_conflicts;
   const noShows = today.filter((e) => checkinState(e, DEMO_TODAY) === 'noshow');
+  // External facility rentals needing attention (COI/deposit/invoice).
+  const rentFollowups = user.site_admin ? rentalFollowups(db).length : 0;
+  const rentUncollected = uncollectedTotal(db);
   const deptQueues = [
     { id: 'Maintenance', icon: 'ti-tool', cls: 't-maint' },
     { id: 'IT', icon: 'ti-device-laptop', cls: 't-it' },
@@ -247,6 +251,25 @@ export default function Home() {
               {pmDue.overdue > 0 ? `${pmDue.overdue} overdue` : ''}
               {pmDue.overdue > 0 && pmDue.soon > 0 ? ' · ' : ''}
               {pmDue.soon > 0 ? `${pmDue.soon} due soon` : ''}
+            </span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {user.site_admin && rentFollowups > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/rentals')}
+          style={{ width: '100%', background: 'var(--warn-tint)', border: '0.5px solid var(--warn)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-rental" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-building-community" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--warn)' }}>Facility rentals</span>
+            <span className="sub">
+              {rentFollowups} need follow-up{rentUncollected > 0 ? ` · ${money(rentUncollected)} uncollected` : ''}
             </span>
           </span>
           <i className="ti ti-chevron-right chev" />
