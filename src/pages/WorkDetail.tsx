@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { canDelegate, deptTeam, assignedToMe } from '../lib/fulfill';
+import { canDelegate, canWorkPool, inPool, deptTeam, assignedToMe } from '../lib/fulfill';
+import { IT_EMERGENCY_CONTACT } from '../data/it-problem-types';
 import { legCollision, driverBusyElsewhere } from '../lib/conflicts';
 import { driverLoad, suggestDriver, WEEKLY_SOFT_CAP } from '../lib/drivers';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
@@ -127,9 +128,19 @@ export default function WorkDetail() {
   // Delegation permissions: a department Lead (or site admin) can assign and
   // re-route work; the person it's assigned to can move it along; anyone else
   // just watches. Mirrors how the production backend will gate these actions.
-  const mayDelegate = canDelegate(user, w.department);
+  // IT is a flat pool: any tech (or admin) can assign, route, and close. Other
+  // departments stay Lead-gated. `mayDelegate` powers the assign/priority UI;
+  // `poolMember` distinguishes an IT teammate from an actual Lead for copy.
+  const mayDelegate = canWorkPool(user, w.department);
+  const poolMember = inPool(user, w.department) && !canDelegate(user, w.department);
   const mine = assignedToMe(w, user);
   const mayProgress = mayDelegate || mine;
+  // "Assign to Me" (Incident's signature button) — available to anyone who can
+  // work the pool and isn't already the assignee.
+  const canGrab = mayDelegate && w.assignee !== user.name && !w.trip;
+  function assignToMe() {
+    updateWorkItem(w!.id, { assignee: user.name, status: w!.status === 'New' ? 'Assigned' : w!.status });
+  }
   const team = deptTeam(db.people, w.department);
   const drivers = db.drivers.filter((d) => d.active !== false);
   const buses = db.resources.filter((r) => r.folder === 'Transportation').map((r) => r.name);
@@ -274,19 +285,38 @@ export default function WorkDetail() {
         </div>
       )}
 
+      {/* Flagged IT emergency — surfaced loud, with who it routed to. */}
+      {w.emergency && (
+        <div className="banner" style={{ background: 'var(--bad-tint)', borderColor: 'transparent', color: 'var(--text-1)', marginTop: 18 }}>
+          <i className="ti ti-alert-triangle-filled" style={{ color: 'var(--bad)' }} />
+          <span>
+            <b>Emergency</b> — routed to {IT_EMERGENCY_CONTACT.name} ({IT_EMERGENCY_CONTACT.phone}) and the whole IT team. Grab it or shadow whoever does.
+          </span>
+        </div>
+      )}
+
       {/* Who's allowed to act, so the demo reads clearly when "viewing as" someone. */}
       <div className="banner" style={{ background: 'var(--surface-2)', borderColor: 'transparent', color: 'var(--text-2)', marginTop: 18 }}>
         <i className={'ti ' + (mayDelegate ? 'ti-arrows-split-2' : mine ? 'ti-user-check' : 'ti-eye')} style={{ color: mayDelegate ? 'var(--green)' : mine ? 'var(--gold)' : 'var(--text-3)' }} />
         <span>
-          {mayDelegate
-            ? user.department === w.department
-              ? `You lead ${w.department} — assign this to your crew and set its priority.`
-              : `As an administrator, you can assign this to the ${w.department} crew and set its priority.`
-            : mine
-              ? 'This is assigned to you — move it along as you work it.'
-              : `Read-only — only ${w.department} can assign and update this.`}
+          {poolMember
+            ? 'IT shared pool — grab this yourself, hand it to a teammate, or close it. Anyone on the team can.'
+            : mayDelegate
+              ? user.department === w.department
+                ? `You lead ${w.department} — assign this to your crew and set its priority.`
+                : `As an administrator, you can assign this to the ${w.department} crew and set its priority.`
+              : mine
+                ? 'This is assigned to you — move it along as you work it.'
+                : `Read-only — only ${w.department} can assign and update this.`}
         </span>
       </div>
+
+      {/* Incident's "Assign to Me" — one tap to pull a pool ticket onto your plate. */}
+      {canGrab && (
+        <button className="fab" style={{ marginTop: 12, justifyContent: 'center', width: '100%' }} onClick={assignToMe}>
+          <i className="ti ti-user-check" /> {w.assignee ? 'Reassign to me' : 'Assign to me'}
+        </button>
+      )}
 
       {/* ---- Status pipeline ---- */}
       <div className="section-label" style={{ marginTop: 22 }}>

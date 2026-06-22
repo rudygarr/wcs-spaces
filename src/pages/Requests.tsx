@@ -6,6 +6,8 @@ import { teamSeasons, teamLevel, type TeamLevel } from '../data/teams';
 import { sportOf, sportVenues, athleticFacilities } from '../data/athletic-venues';
 import { useSession } from '../lib/session';
 import { useStore } from '../lib/store';
+import { deptTeam } from '../lib/fulfill';
+import { IT_PROBLEM_TYPES, IT_EMERGENCY_CONTACT } from '../data/it-problem-types';
 import type { Department } from '../lib/types';
 
 type Field =
@@ -481,6 +483,55 @@ function readPhoto(file: File): Promise<string> {
   });
 }
 
+// The IT "Problem Type" picker — the glyph grid straight off WCS's live
+// SchoolDude portal (Step 3). We lead with the common types and tuck the long
+// tail behind "More," instead of dumping all 20 at once. Tapping a tile selects
+// it; Miscellaneous is the always-visible catch-all.
+function ITProblemPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [showMore, setShowMore] = useState(false);
+  const visible = IT_PROBLEM_TYPES.filter((t) => t.common || t.name.startsWith('Miscellaneous') || showMore);
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
+        {visible.map((t) => {
+          const sel = value === t.name;
+          return (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => onChange(t.name)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+                padding: '12px 6px',
+                borderRadius: 'var(--r-md)',
+                border: '0.5px solid ' + (sel ? 'var(--green)' : 'var(--border-2)'),
+                background: sel ? 'var(--green-tint)' : 'var(--surface)',
+                color: sel ? 'var(--green)' : 'var(--text-1)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <i className={'ti ' + t.glyph} style={{ fontSize: 22 }} />
+              <span style={{ fontSize: 11.5, lineHeight: 1.2, textAlign: 'center' }}>{t.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={() => setShowMore((s) => !s)}
+        style={{ background: 'none', border: 'none', color: 'var(--info)', fontSize: 13, padding: '8px 0 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+      >
+        <i className={'ti ' + (showMore ? 'ti-chevron-up' : 'ti-chevron-down')} />
+        {showMore ? 'Fewer problem types' : 'More problem types'}
+      </button>
+    </>
+  );
+}
+
 // A live request form for the Maintenance and IT doors. Deliberately tiny for
 // the requester — category, where, what's wrong, an optional photo — and on
 // submit it becomes a WorkItem that drops straight into the department queue.
@@ -488,7 +539,7 @@ function readPhoto(file: File): Promise<string> {
 // never sets priority or assignee; the department triages that side.
 function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: string }) {
   const nav = useNavigate();
-  const { addWorkItem } = useStore();
+  const { addWorkItem, notify, db } = useStore();
   const { user } = useSession();
   const isIT = door.id === 'it';
   const dept: Department = isIT ? 'IT' : 'Maintenance';
@@ -503,9 +554,7 @@ function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: str
   const [details, setDetails] = useState('');
   const [photo, setPhoto] = useState<string>('');
 
-  const catOpts = isIT
-    ? ['Hardware', 'Software / login', 'Network / Wi-Fi', 'AV / projector', 'Other']
-    : ['Plumbing', 'Electrical', 'HVAC', 'Furniture / setup', 'Grounds', 'General'];
+  const catOpts = ['Plumbing', 'Electrical', 'HVAC', 'Furniture / setup', 'Grounds', 'General'];
 
   const type = isIT ? problem : category;
   const where = isIT ? [location, area, room].filter(Boolean).join(' · ') : [location, room].filter(Boolean).join(' · ');
@@ -518,6 +567,7 @@ function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: str
 
   function submit() {
     if (!ready) return;
+    const isEmergency = isIT && emergency;
     const item = addWorkItem({
       department: dept,
       type,
@@ -526,26 +576,42 @@ function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: str
       createdAt: new Date().toISOString(),
       status: 'New',
       // Emergencies jump the queue; everything else triaged by the department.
-      priority: emergency ? 'Urgent' : 'Normal',
+      priority: isEmergency ? 'Urgent' : 'Normal',
+      emergency: isEmergency || undefined,
       location: where || undefined,
       details: details.trim(),
       photo: photo || undefined,
     });
+    // Emergency? Dual-route to the IT lead (Omar) AND the whole team, exactly
+    // like the SchoolDude emergency contact. Everyone gets pinged; whoever's
+    // free grabs it, the rest shadow.
+    if (isEmergency) {
+      const recipients = new Set(deptTeam(db.people, 'IT').map((p) => p.name));
+      recipients.add(IT_EMERGENCY_CONTACT.name);
+      recipients.forEach((to) => {
+        if (to === user.name) return;
+        notify({ to, kind: 'crew', title: `🚨 Emergency IT: ${item.title}`, body: where || undefined, link: `#/work/${item.id}` });
+      });
+    }
     nav('/work/' + item.id);
   }
 
   return (
     <>
       <Labeled label={isIT ? 'Problem type' : 'Work category'}>
-        <div style={{ position: 'relative' }}>
-          <select value={isIT ? problem : category} onChange={(e) => (isIT ? setProblem(e.target.value) : setCategory(e.target.value))} style={{ ...inputStyle, appearance: 'none' }}>
-            <option value="">Select…</option>
-            {catOpts.map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
-          {chevron}
-        </div>
+        {isIT ? (
+          <ITProblemPicker value={problem} onChange={setProblem} />
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ ...inputStyle, appearance: 'none' }}>
+              <option value="">Select…</option>
+              {catOpts.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </select>
+            {chevron}
+          </div>
+        )}
       </Labeled>
 
       <Labeled label="Location">
@@ -587,9 +653,24 @@ function DeptForm({ door, initialLocation }: { door: Door; initialLocation?: str
       </Labeled>
 
       {isIT ? (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)', marginBottom: 14 }}>
-          <input type="checkbox" checked={emergency} onChange={(e) => setEmergency(e.target.checked)} style={{ width: 18, height: 18 }} /> This is an emergency
-        </label>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, color: 'var(--text-1)' }}>
+            <input type="checkbox" checked={emergency} onChange={(e) => setEmergency(e.target.checked)} style={{ width: 18, height: 18 }} /> This is an emergency
+          </label>
+          {emergency ? (
+            <div className="banner" style={{ background: 'var(--bad-tint)', borderColor: 'transparent', color: 'var(--text-1)', marginTop: 10 }}>
+              <i className="ti ti-alert-triangle-filled" style={{ color: 'var(--bad)' }} />
+              <span>
+                This pings <b>{IT_EMERGENCY_CONTACT.name}</b> and the whole IT team right away. For a true emergency also call{' '}
+                <b>{IT_EMERGENCY_CONTACT.phone}</b>.
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+              Emergencies route to {IT_EMERGENCY_CONTACT.name} ({IT_EMERGENCY_CONTACT.phone}) and the whole team.
+            </div>
+          )}
+        </div>
       ) : (
         <Labeled label="Photo of the problem (optional)">
           <PhotoField photo={photo} onFile={onFile} onClear={() => setPhoto('')} />

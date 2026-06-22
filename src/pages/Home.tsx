@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { DEMO_TODAY, eventsOnDay, findConflicts, fmtTime, fmtDateLong, statusColor, isMine } from '../lib/data';
 import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
-import { assignedToMe } from '../lib/fulfill';
+import { assignedToMe, canWorkPool } from '../lib/fulfill';
+import { itGlyph } from '../data/it-problem-types';
+import { statusTint, priorityColor } from './Queue';
+import type { Department, PersonRec, WorkItem } from '../lib/types';
 import { allConflicts, CONFLICT_ICON } from '../lib/conflicts';
 import { pendingForApprover } from '../lib/approvals';
 import { pmDueCount } from '../lib/assets';
@@ -23,6 +26,115 @@ function greet(): string {
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
+}
+
+const DEPT_META: Record<Department, { icon: string; cls: string; noun: string }> = {
+  Maintenance: { icon: 'ti-tool', cls: 't-maint', noun: 'work orders' },
+  IT: { icon: 'ti-device-laptop', cls: 't-it', noun: 'tickets' },
+  Transportation: { icon: 'ti-bus', cls: 't-ath', noun: 'trips' },
+};
+const STATUS_RANK: Record<string, number> = { New: 0, Assigned: 1, Scheduled: 2, 'In progress': 3, Done: 4 };
+const PRIO_RANK: Record<string, number> = { Urgent: 0, High: 1, Normal: 2, Low: 3 };
+
+// The role-aware lead block: department staff land on their pool, not a generic
+// calendar — "it's their daily job." IT gets the full shared-pool treatment
+// (emergencies pinned, one-tap "Assign to me"); other departments get the same
+// triage board, gated to leads. The calendar drops to a secondary strip below.
+function PoolHero({ dept, user }: { dept: Department; user: PersonRec }) {
+  const nav = useNavigate();
+  const { db, updateWorkItem } = useStore();
+  const meta = DEPT_META[dept];
+  const canWork = canWorkPool(user, dept);
+
+  const open = db.workItems
+    .filter((w) => !w.withdrawn && w.department === dept && w.status !== 'Done')
+    .sort((a, b) => {
+      if (!!b.emergency !== !!a.emergency) return a.emergency ? -1 : 1;
+      const sr = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9);
+      if (sr !== 0) return sr;
+      const pr = (PRIO_RANK[a.priority] ?? 9) - (PRIO_RANK[b.priority] ?? 9);
+      if (pr !== 0) return pr;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  const unassigned = open.filter((w) => !w.assignee && !w.trip).length;
+  const emergencies = open.filter((w) => w.emergency).length;
+
+  function grab(w: WorkItem) {
+    updateWorkItem(w.id, { assignee: user.name, status: w.status === 'New' ? 'Assigned' : w.status });
+  }
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <button
+        className="row"
+        onClick={() => nav('/queue?dept=' + dept)}
+        style={{ width: '100%', background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--r-lg) var(--r-lg) 0 0', padding: '14px 16px' }}
+      >
+        <span className={'tile-icon ' + meta.cls} style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+          <i className={'ti ' + meta.icon} />
+        </span>
+        <span className="body">
+          <span className="title">{dept === 'IT' ? 'IT ticket pool' : dept + ' queue'}</span>
+          <span className="sub">
+            {open.length} open · {unassigned} unassigned
+            {emergencies > 0 ? ` · ${emergencies} emergency` : ''}
+          </span>
+        </span>
+        <i className="ti ti-chevron-right chev" />
+      </button>
+
+      <div className="list" style={{ borderRadius: '0 0 var(--r-lg) var(--r-lg)', borderTop: 'none' }}>
+        {open.length === 0 && <div className="empty">Nothing open — pool's clear.</div>}
+        {open.slice(0, 5).map((w, i) => {
+          const icon = dept === 'IT' ? itGlyph(w.type) : meta.icon;
+          const canGrab = canWork && !w.assignee && !w.trip;
+          return (
+            <div key={w.id}>
+              {i > 0 && <div className="divider" style={{ marginLeft: 16 }} />}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <button className="row" onClick={() => nav('/work/' + w.id)} style={{ flex: 1, minWidth: 0, background: 'none', alignItems: 'flex-start' }}>
+                  <span className={'tile-icon ' + meta.cls} style={{ width: 32, height: 32, borderRadius: 9, fontSize: 16, flexShrink: 0, marginTop: 2 }}>
+                    <i className={'ti ' + icon} />
+                  </span>
+                  <span className="body">
+                    <span className="title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {w.emergency && <i className="ti ti-alert-triangle-filled" style={{ color: 'var(--bad)', fontSize: 14 }} />}
+                      {!w.emergency && w.priority !== 'Normal' && w.priority !== 'Low' && (
+                        <span className="dot" style={{ background: priorityColor(w.priority), width: 7, height: 7 }} />
+                      )}
+                      {w.title}
+                    </span>
+                    <span className="sub">
+                      {w.type}
+                      {w.location ? ' · ' + w.location : ''}
+                      {w.assignee ? ' · ' + w.assignee : ''}
+                    </span>
+                  </span>
+                </button>
+                {canGrab ? (
+                  <button
+                    onClick={() => grab(w)}
+                    style={{ flexShrink: 0, marginRight: 12, padding: '6px 11px', borderRadius: 999, border: 'none', background: 'var(--green-tint)', color: 'var(--green)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    Assign to me
+                  </button>
+                ) : (
+                  <span className="pill" style={{ flexShrink: 0, marginRight: 12, background: 'color-mix(in srgb, ' + statusTint(w.status) + ' 14%, transparent)', color: statusTint(w.status), fontSize: 11.5 }}>
+                    {w.status}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {open.length > 5 && (
+          <button className="cc-more" style={{ width: '100%' }} onClick={() => nav('/queue?dept=' + dept)}>
+            +{open.length - 5} more in the pool
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -68,9 +180,14 @@ export default function Home() {
           {greet()}, {firstName}
         </h1>
         <div className="subgreet">
-          {today.length} events today · {pendingCount} approvals waiting
+          {user.department
+            ? `${openWork(user.department)} open ${DEPT_META[user.department].noun} · ${today.length} events today`
+            : `${today.length} events today · ${pendingCount} approvals waiting`}
         </div>
       </div>
+
+      {/* Role-aware lead: department staff open straight onto their pool. */}
+      {user.department && <PoolHero dept={user.department} user={user} />}
 
       {liveConflicts.length > 0 && (
         <div className="conflict-card" style={{ marginBottom: 26 }}>

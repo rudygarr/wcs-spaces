@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { assignedToMe, canDelegate } from '../lib/fulfill';
 import { tripHasActiveConflict } from '../lib/conflicts';
+import { itGlyph } from '../data/it-problem-types';
 import type { Department, Priority, WorkItem, WorkStatus } from '../lib/types';
 
 const DEPTS: { id: Department; icon: string; cls: string }[] = [
@@ -135,14 +136,18 @@ function WorkRow({ w, onOpen }: { w: WorkItem; onOpen: () => void }) {
   const { db } = useStore();
   const dept = DEPTS.find((d) => d.id === w.department);
   const conflict = tripHasActiveConflict(db, w);
+  // IT rows carry their problem-type glyph so the pool reads at a glance.
+  const icon = w.department === 'IT' ? itGlyph(w.type) : (dept?.icon ?? 'ti-dots');
   return (
     <button className="row" onClick={onOpen} style={{ alignItems: 'flex-start' }}>
       <span className={'tile-icon ' + (dept?.cls ?? '')} style={{ width: 34, height: 34, borderRadius: 10, fontSize: 17, flexShrink: 0, marginTop: 2 }}>
-        <i className={'ti ' + (dept?.icon ?? 'ti-dots')} />
+        <i className={'ti ' + icon} />
       </span>
       <span className="body">
         <span className="title" style={{ display: 'flex', alignItems: 'center', gap: 6, color: conflict ? 'var(--warn)' : undefined }}>
-          {conflict ? (
+          {w.emergency ? (
+            <i className="ti ti-alert-triangle-filled" style={{ color: 'var(--bad)', fontSize: 15 }} title="Emergency" />
+          ) : conflict ? (
             <i className="ti ti-alert-triangle" style={{ color: 'var(--warn)', fontSize: 15 }} />
           ) : (
             w.priority !== 'Normal' &&

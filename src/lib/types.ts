@@ -172,6 +172,11 @@ export interface WorkItem {
   // The requester pulled this back before it was worked. Reversible; withdrawn
   // items drop out of department queues but keep their history.
   withdrawn?: boolean;
+  // IT "Emergency?" flag — mirrors SchoolDude/Incident. When set, the ticket is
+  // dual-routed to the IT lead (Omar) AND the whole team on submit, and pinned
+  // to the top of the pool. Distinct from priority (an emergency is always Urgent,
+  // but not every Urgent item is a flagged emergency).
+  emergency?: boolean;
 }
 
 export interface Driver {

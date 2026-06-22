@@ -8,6 +8,9 @@ export const deptStaff: Record<string, { department: Department; deptRole: 'Lead
   'Jose Oviedo': { department: 'Maintenance', deptRole: 'Tech' },
   'Ariel Triana': { department: 'Maintenance', deptRole: 'Tech' },
   'Cesar Mejia': { department: 'Maintenance', deptRole: 'Tech' },
+  // Omar Valerio heads IT — the emergency-escalation contact on the live
+  // SchoolDude form and the person who'd stand the module up on the M365 backend.
+  'Omar Valerio': { department: 'IT', deptRole: 'Lead' },
   'Rob Lundgren': { department: 'IT', deptRole: 'Lead' },
   'Lazaro (Laz) Ospina': { department: 'IT', deptRole: 'Tech' },
   'Louis Moll': { department: 'IT', deptRole: 'Tech' },
@@ -88,7 +91,7 @@ export const seedWorkItems: WorkItem[] = [
   {
     id: 'w-i1',
     department: 'IT',
-    type: 'AV / projector',
+    type: 'Projector',
     title: 'Lighthouse PAC projector won’t power on',
     requestedBy: 'Rudy Garrido',
     createdAt: '2026-08-20T07:40:00-04:00',
@@ -100,7 +103,7 @@ export const seedWorkItems: WorkItem[] = [
   {
     id: 'w-i2',
     department: 'IT',
-    type: 'Software',
+    type: 'Software Request',
     title: 'Install Adobe CC on 12 HS lab machines',
     requestedBy: 'Seth Carlson',
     createdAt: '2026-08-17T13:20:00-04:00',
@@ -114,14 +117,27 @@ export const seedWorkItems: WorkItem[] = [
   {
     id: 'w-i3',
     department: 'IT',
-    type: 'Network / Wi-Fi',
+    type: 'Internet Connection',
     title: 'Wi-Fi dead in MS 7th grade wing',
     requestedBy: 'Kathy Ramirez',
     createdAt: '2026-08-20T09:15:00-04:00',
     status: 'New',
     priority: 'Urgent',
+    emergency: true,
     location: '7th Grade Wing',
-    details: 'Whole wing offline since this morning. ~4 classrooms affected.',
+    details: 'Whole wing offline since this morning. ~4 classrooms affected. Flagged emergency — routed to Omar + the team.',
+  },
+  {
+    id: 'w-i4',
+    department: 'IT',
+    type: 'Password',
+    title: 'Locked out of M365 after password reset',
+    requestedBy: 'Vicki Kaplan',
+    createdAt: '2026-08-20T08:50:00-04:00',
+    status: 'New',
+    priority: 'Normal',
+    location: 'HS Office',
+    details: 'Reset my password this morning, now Outlook and Teams won’t accept it on any device.',
   },
 
   // ---- Transportation ----
@@ -185,7 +201,7 @@ export const seedWorkItems: WorkItem[] = [
   {
     id: 'w-d2',
     department: 'IT',
-    type: 'Hardware',
+    type: 'Projector',
     title: 'Projector bulb replacement — Room 118',
     requestedBy: 'Seth Carlson',
     createdAt: '2026-08-17T10:00:00-04:00',
@@ -198,7 +214,7 @@ export const seedWorkItems: WorkItem[] = [
   {
     id: 'w-d3',
     department: 'IT',
-    type: 'Account',
+    type: 'Student Hardware',
     title: 'New-hire laptop imaging + login',
     requestedBy: 'Amy Williams',
     createdAt: '2026-08-12T08:30:00-04:00',
@@ -207,6 +223,21 @@ export const seedWorkItems: WorkItem[] = [
     priority: 'Normal',
     location: 'IT Office',
     assignee: 'Lazaro (Laz) Ospina',
+  },
+  {
+    // Anonymized from a real Incident ticket (#31093) — names/emails synthetic
+    // per the public-repo PII rule.
+    id: 'w-d5',
+    department: 'IT',
+    type: 'Student Hardware',
+    title: 'Lighthouse student MacBook won’t hold charge',
+    requestedBy: 'Scarlett Saldana',
+    createdAt: '2026-08-15T12:10:00-04:00',
+    completedAt: '2026-08-16T09:30:00-04:00',
+    status: 'Done',
+    priority: 'Normal',
+    location: 'The Lighthouse',
+    assignee: 'Louis Moll',
   },
   {
     id: 'w-d4',
