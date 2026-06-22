@@ -1,12 +1,12 @@
 // WCS Spaces service worker — makes the app installable and gives it an offline
 // shell. Deliberately network-first so the frequently-redeployed demo never
 // serves a stale build; the cache is only a fallback when offline.
-const CACHE = 'wcs-spaces-v1';
+const CACHE = 'wcs-spaces-v2';
 
 self.addEventListener('install', (event) => {
   // Cache the app shell so a cold offline launch still boots.
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './app-icon.svg', './manifest.webmanifest'])).catch(() => {}),
+    caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './apple-touch-icon.png', './manifest.webmanifest'])).catch(() => {}),
   );
   self.skipWaiting();
 });
