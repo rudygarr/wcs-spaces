@@ -34,6 +34,12 @@ export interface WcsEvent {
   transportation?: string | null;
   // Visual room-setup template id (see SetupDiagram) — the layout the crew builds.
   setupStyle?: string;
+  // FSAutomation: the booking can tell the building to get itself ready —
+  // auto-activate HVAC and/or lighting ahead of the event, switching off at
+  // teardown. `preStartMin` is the lead time (minutes before start, mirrors
+  // Brightly's Pre-Start Value). Absent = no automation. The calendar runs the
+  // building. Real BAS wiring is a deferred integration; this models the intent.
+  climate?: { hvac: boolean; lighting: boolean; preStartMin: number };
   // Decisions recorded by space approvers (see lib/approvals). Only stores
   // approvers who have acted; everyone else is implicitly still pending.
   approvals?: ApprovalRec[];

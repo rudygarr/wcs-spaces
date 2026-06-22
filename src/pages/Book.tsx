@@ -87,6 +87,11 @@ export default function Book() {
   const [setupMin, setSetupMin] = useState(0);
   const [teardownMin, setTeardownMin] = useState(0);
   const [attendance, setAttendance] = useState('');
+  // FSAutomation: have the building warm itself up before the event.
+  const [climateHvac, setClimateHvac] = useState(false);
+  const [climateLights, setClimateLights] = useState(false);
+  const [preStartMin, setPreStartMin] = useState(60);
+  const climateOn = climateHvac || climateLights;
 
   const isAdmin = user.site_admin;
   const templates = db.templates.filter((t) => t.door === 'book');
@@ -208,6 +213,7 @@ export default function Book() {
       ),
       setupStyle: setupStyle || undefined,
       expectedAttendance: Number.isFinite(headcount) && headcount > 0 ? headcount : undefined,
+      climate: climateOn ? { hvac: climateHvac, lighting: climateLights, preStartMin } : undefined,
     };
     const payloads = instances.map((k) => {
       const s = new Date(`${k}T${start}`);
@@ -328,6 +334,31 @@ export default function Book() {
           {setupMin > 0 && teardownMin > 0 ? ' and ' : ''}
           {teardownMin > 0 ? `${teardownMin}m after` : ''} — counts toward conflicts.
         </div>
+      )}
+
+      <label className="flabel" style={{ marginTop: 4 }}>Building automation</label>
+      <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>
+        Have the space ready before you walk in — auto-activate climate &amp; lighting ahead of the event, off at teardown.
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className={'chip' + (climateHvac ? ' on' : '')} onClick={() => setClimateHvac((v) => !v)}>
+          <i className="ti ti-temperature" style={{ marginRight: 5 }} /> HVAC / climate
+        </button>
+        <button type="button" className={'chip' + (climateLights ? ' on' : '')} onClick={() => setClimateLights((v) => !v)}>
+          <i className="ti ti-bulb" style={{ marginRight: 5 }} /> Lighting
+        </button>
+      </div>
+      {climateOn && (
+        <>
+          <label className="flabel">Pre-start lead time</label>
+          <BufferSelect value={preStartMin} onChange={setPreStartMin} />
+          <div style={{ fontSize: 12.5, color: 'var(--green)', margin: '4px 0 2px' }}>
+            <i className="ti ti-building-cog" style={{ marginRight: 5 }} />
+            {[climateHvac ? 'Climate' : '', climateLights ? 'lighting' : ''].filter(Boolean).join(' + ')}
+            {' '}on {preStartMin === 0 ? 'at start time' : `${preStartMin} min before`}
+            {teardownMin > 0 ? `, off ${teardownMin} min after teardown` : ', off at teardown'}.
+          </div>
+        </>
       )}
 
       <label className="flabel">Repeats</label>

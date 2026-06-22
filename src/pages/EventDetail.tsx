@@ -206,6 +206,13 @@ export default function EventDetail() {
             {ev.expectedAttendance} expected
           </div>
         )}
+        {ev.climate && (ev.climate.hvac || ev.climate.lighting) && (
+          <div className="detail-meta" style={{ color: 'var(--green)' }}>
+            <i className="ti ti-building-cog" style={{ color: 'var(--green)' }} />
+            {[ev.climate.hvac ? 'Climate' : '', ev.climate.lighting ? 'lighting' : ''].filter(Boolean).join(' + ')}
+            {' '}auto-on {ev.climate.preStartMin === 0 ? 'at start' : `${ev.climate.preStartMin} min before`} (FSAutomation)
+          </div>
+        )}
         <div className="detail-meta">
           <i className={'ti ' + (ev.kind === 'notice' ? 'ti-map-pin' : 'ti-door')} />
           {ev.rooms.join(', ') || ev.location || (ev.kind === 'notice' ? 'No campus space needed' : 'No room assigned')}

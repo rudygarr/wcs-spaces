@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 23;
+export const SEED_VERSION = 24;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -90,6 +90,8 @@ function seedInventoryDemand(): EventRec[] {
       starts_at: '2026-08-20T22:00:00.000Z', // 6pm EDT
       ends_at: '2026-08-21T01:00:00.000Z',
       details: 'Campus-wide open house for prospective families.',
+      // FSAutomation demo: Beacon Hall climate + lighting warm up an hour ahead.
+      climate: { hvac: true, lighting: true, preStartMin: 60 },
     },
     {
       ...base,
