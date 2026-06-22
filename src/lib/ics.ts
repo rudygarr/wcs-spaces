@@ -63,11 +63,11 @@ function vevent(e: EventRec): string[] {
   return lines;
 }
 
-export function buildICS(events: EventRec[], calName = 'WCS Spaces'): string {
+export function buildICS(events: EventRec[], calName = 'Steward'): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//WCS Spaces//EN',
+    'PRODID:-//Steward//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${esc(calName)}`,

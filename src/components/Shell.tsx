@@ -8,6 +8,7 @@ import { DeliveryPreview, NotifSettings } from './NotifExtras';
 import { CHANNEL_META } from '../lib/notify';
 import type { ReactNode } from 'react';
 import type { Notif } from '../lib/types';
+import helmetMark from '../assets/brand/warrior-helmet.png';
 
 function RoleSwitcher() {
   const { user, setUser } = useSession();
@@ -206,9 +207,9 @@ export default function Shell({ children }: { children: ReactNode }) {
         <div className="topbar-inner">
           <button className="brand" onClick={() => nav('/')} style={{ background: 'none', border: 'none', padding: 0 }}>
             <span className="brand-mark">
-              <i className="ti ti-building-arch" />
+              <img src={helmetMark} alt="" />
             </span>
-            <span className="brand-name">Spaces</span>
+            <span className="brand-name">STEWARD</span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button className="bell" onClick={() => nav('/search')} aria-label="Search">

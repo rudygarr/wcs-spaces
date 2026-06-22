@@ -23,13 +23,13 @@ export function DeliveryPreview({ notif, onClose }: { notif: Notif; onClose: () 
             <i className="ti ti-mail" /> Email
           </div>
           <div className="dp-email">
-            <div className="dp-email-row"><span>From</span> WCS Spaces &lt;no-reply@demo.wcsmiami.org&gt;</div>
+            <div className="dp-email-row"><span>From</span> Steward &lt;no-reply@demo.wcsmiami.org&gt;</div>
             <div className="dp-email-row"><span>To</span> {to}</div>
             <div className="dp-email-row"><span>Subject</span> {notif.title}</div>
             <div className="dp-email-body">
               {notif.body && <p>{notif.body}</p>}
-              <p>You can review and act on this in WCS Spaces.</p>
-              <span className="dp-btn">Open in Spaces →</span>
+              <p>You can review and act on this in Steward.</p>
+              <span className="dp-btn">Open in Steward →</span>
             </div>
           </div>
         </div>
@@ -42,14 +42,14 @@ export function DeliveryPreview({ notif, onClose }: { notif: Notif; onClose: () 
           </div>
           <div className="dp-teams">
             <div className="dp-teams-bot">
-              <span className="dp-teams-ic"><i className="ti ti-building-arch" /></span>
+              <span className="dp-teams-ic"><i className="ti ti-shield-chevron" /></span>
               <div>
-                <div className="dp-teams-name">WCS Spaces <span>· bot</span></div>
+                <div className="dp-teams-name">Steward <span>· bot</span></div>
                 <div className="dp-teams-title">{notif.title}</div>
               </div>
             </div>
             {notif.body && <div className="dp-teams-body">{notif.body}</div>}
-            <span className="dp-btn">Open in Spaces</span>
+            <span className="dp-btn">Open in Steward</span>
           </div>
         </div>
       )}
@@ -84,11 +84,11 @@ export function NotifSettings({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Notification settings" onClose={onClose}>
       <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 0 }}>
-        The in-app bell is always on. Choose where else WCS Spaces reaches you.
+        The in-app bell is always on. Choose where else Steward reaches you.
       </p>
 
       <Toggle label="Email" sub="To your school address" icon="ti-mail" on={email} onChange={setEmail} />
-      <Toggle label="Microsoft Teams" sub="Chat from the Spaces bot" icon="ti-brand-teams" on={teams} onChange={setTeams} />
+      <Toggle label="Microsoft Teams" sub="Chat from the Steward bot" icon="ti-brand-teams" on={teams} onChange={setTeams} />
 
       <div className="flabel" style={{ marginTop: 16, marginBottom: 8 }}>Frequency</div>
       <div className="seg seg-sm">

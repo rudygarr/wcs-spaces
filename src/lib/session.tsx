@@ -8,6 +8,9 @@ import type { PersonRec } from './types';
 interface SessionCtx {
   user: PersonRec;
   setUser: (p: PersonRec) => void;
+  // Demo sign-in gate: the splash sets this true. Real Microsoft SSO later.
+  authed: boolean;
+  signIn: () => void;
 }
 
 const Ctx = createContext<SessionCtx | null>(null);
@@ -21,11 +24,16 @@ setAuditActor(defaultUser.name);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PersonRec>(defaultUser);
+  const [authed, setAuthed] = useState(false);
   const switchUser = (p: PersonRec) => {
     setAuditActor(p.name);
     setUser(p);
   };
-  return <Ctx.Provider value={{ user, setUser: switchUser }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, setUser: switchUser, authed, signIn: () => setAuthed(true) }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useSession(): SessionCtx {

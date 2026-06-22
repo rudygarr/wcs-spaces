@@ -25,25 +25,111 @@
   align-items: center;
   justify-content: space-between;
 }
+/* Gotham is the official WCS face. Drop the licensed webfont files into
+   /public/fonts and these @font-face rules pick them up automatically;
+   until then the stack falls through to Montserrat (loaded in index.html),
+   the standard geometric Gotham stand-in. */
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  --font-brand: 'Gotham', 'Montserrat', -apple-system, 'SF Pro Display', system-ui, sans-serif;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: 9px;
 }
 .brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--green);
-  color: var(--gold);
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  font-size: 15px;
+}
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .brand-name {
-  font-size: 16px;
+  font-family: var(--font-brand);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--green);
+}
+
+/* Sign-in splash — the kneeling Warrior is the hero (oath of service), STEWARD
+   wordmark, the 1 Peter 4:10–11 reference, then Microsoft 365 SSO. */
+.signin {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 28px calc(env(safe-area-inset-bottom) + 32px);
+  gap: 0;
+}
+.signin-hero {
+  width: min(64vw, 268px);
+  height: auto;
+  margin-bottom: 18px;
+}
+.signin-mark {
+  font-family: var(--font-brand);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  color: var(--green);
+  line-height: 1;
+}
+.signin-rule {
+  width: 52px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--gold);
+  margin: 13px 0 11px;
+}
+.signin-verse {
+  font-family: var(--font-brand);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.16em;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.signin-btn {
+  margin-top: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--green);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 13px;
+  padding: 14px 22px;
+  cursor: pointer;
+}
+.signin-btn:active {
+  transform: scale(0.98);
+}
+.signin-foot {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-3);
 }
 
 .userchip {

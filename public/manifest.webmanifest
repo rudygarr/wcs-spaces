@@ -1,7 +1,7 @@
 {
-  "name": "WCS Spaces",
-  "short_name": "Spaces",
-  "description": "Room & resource scheduling and the request hub for Westminster Christian School.",
+  "name": "Steward",
+  "short_name": "Steward",
+  "description": "Scheduling, facilities, IT, and the request hub for Westminster Christian School.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
