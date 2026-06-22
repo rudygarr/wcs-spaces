@@ -35,23 +35,35 @@ const resIcons: Record<string, string> = {
   Athletics: 'ti-first-aid-kit',
 };
 
-function AddSpace({ kind, folders, onClose }: { kind: 'rooms' | 'resources'; folders: string[]; onClose: () => void }) {
-  const { addRoom, addResource } = useStore();
-  const [name, setName] = useState('');
-  const [folder, setFolder] = useState(folders[0] ?? '');
-  const [qty, setQty] = useState('');
+function AddSpace({
+  kind,
+  folders,
+  editing,
+  onClose,
+}: {
+  kind: 'rooms' | 'resources';
+  folders: string[];
+  editing?: Resource;
+  onClose: () => void;
+}) {
+  const { addRoom, addResource, updateResource, removeResource } = useStore();
+  const [name, setName] = useState(editing?.name ?? '');
+  const [folder, setFolder] = useState(editing?.folder ?? folders[0] ?? '');
+  const [qty, setQty] = useState(editing?.qty != null ? String(editing.qty) : '');
+  const [confirmDel, setConfirmDel] = useState(false);
   const label = kind === 'rooms' ? 'room' : 'resource';
+  const isEdit = !!editing;
   function submit() {
     if (!name.trim() || !folder.trim()) return;
-    if (kind === 'rooms') addRoom(name, folder.trim());
-    else {
-      const n = parseInt(qty, 10);
-      addResource(name, folder.trim(), Number.isFinite(n) && n > 0 ? n : undefined);
-    }
+    const n = parseInt(qty, 10);
+    const q = Number.isFinite(n) && n > 0 ? n : undefined;
+    if (isEdit) updateResource(editing!.id, { name, folder: folder.trim(), qty: q ?? null });
+    else if (kind === 'rooms') addRoom(name, folder.trim());
+    else addResource(name, folder.trim(), q);
     onClose();
   }
   return (
-    <Modal title={`Add ${label}`} onClose={onClose}>
+    <Modal title={isEdit ? 'Edit resource' : `Add ${label}`} onClose={onClose}>
       <label className="flabel">{label[0].toUpperCase() + label.slice(1)} name</label>
       <input style={field} value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={kind === 'rooms' ? 'Room 204' : 'Projector cart'} />
       <label className="flabel">Group</label>
@@ -71,8 +83,32 @@ function AddSpace({ kind, folders, onClose }: { kind: 'rooms' | 'resources'; fol
         </>
       )}
       <button style={{ ...primaryBtn, marginTop: 18 }} onClick={submit}>
-        Add {label}
+        {isEdit ? 'Save changes' : `Add ${label}`}
       </button>
+      {isEdit &&
+        (confirmDel ? (
+          <div className="del-confirm">
+            <span>Remove “{editing!.name}” from the catalog?</span>
+            <div className="del-actions">
+              <button className="btn-soft" onClick={() => setConfirmDel(false)}>
+                Keep it
+              </button>
+              <button
+                className="btn-danger"
+                onClick={() => {
+                  removeResource(editing!.id);
+                  onClose();
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="del-link" onClick={() => setConfirmDel(true)}>
+            <i className="ti ti-trash" /> Remove resource
+          </button>
+        ))}
     </Modal>
   );
 }
@@ -83,6 +119,7 @@ export default function Spaces() {
   const [tab, setTab] = useState<Tab>('rooms');
   const [roomView, setRoomView] = useState<'list' | 'map'>('list');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Resource | null>(null);
 
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -153,8 +190,7 @@ export default function Spaces() {
                       {i > 0 && <div className="divider" style={{ marginLeft: 58 }} />}
                       <button
                         className="space-row"
-                        onClick={() => tab === 'rooms' && nav('/room/' + item.id)}
-                        style={tab === 'resources' ? { cursor: 'default' } : undefined}
+                        onClick={() => (tab === 'rooms' ? nav('/room/' + item.id) : setEditing(item as Resource))}
                       >
                         <span className="space-ico">
                           <i className={'ti ' + (icons[f.name] || 'ti-point')} />
@@ -176,7 +212,7 @@ export default function Spaces() {
                                 ? `${counts.get(item.name)} bookings`
                                 : '—'}
                         </span>
-                        {tab === 'rooms' && <i className="ti ti-chevron-right chev" />}
+                        <i className={'ti chev ' + (tab === 'rooms' ? 'ti-chevron-right' : 'ti-pencil')} />
                       </button>
                     </div>
                   );
@@ -192,6 +228,15 @@ export default function Spaces() {
           kind={tab}
           folders={(tab === 'rooms' ? roomGroups : resGroups).map((g) => g.name)}
           onClose={() => setAdding(false)}
+        />
+      )}
+
+      {editing && (
+        <AddSpace
+          kind="resources"
+          folders={resGroups.map((g) => g.name)}
+          editing={editing}
+          onClose={() => setEditing(null)}
         />
       )}
     </>

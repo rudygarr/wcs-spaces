@@ -886,6 +886,46 @@
   color: var(--text-3);
   margin-top: 7px;
 }
+.del-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--bad);
+  font-size: 14px;
+  cursor: pointer;
+}
+.del-confirm {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bad-tint, rgba(220, 60, 50, 0.08));
+  border-radius: var(--r-md);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.del-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.del-actions button {
+  flex: 1;
+}
+.btn-danger {
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--bad);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .add-row {
   display: flex;
   align-items: center;

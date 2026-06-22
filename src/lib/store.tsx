@@ -42,6 +42,8 @@ interface StoreCtx {
   db: Database;
   addRoom: (name: string, folder: string) => Room;
   addResource: (name: string, folder: string, qty?: number) => Resource;
+  updateResource: (id: string, patch: { name?: string; folder?: string; qty?: number | null }) => void;
+  removeResource: (id: string) => void;
   addPerson: (p: Omit<PersonRec, 'id'>) => PersonRec;
   updatePerson: (id: string, patch: Partial<PersonRec>) => void;
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
@@ -160,6 +162,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       commit((d) => ({ ...d, resources: [...d.resources, resource] }));
       return resource;
+    },
+    updateResource(id, patch) {
+      commit((d) => ({
+        ...d,
+        resources: d.resources.map((r) => {
+          if (r.id !== id) return r;
+          const next: Resource = { ...r };
+          if (patch.name !== undefined) next.name = patch.name.trim();
+          if (patch.folder !== undefined) next.folder = patch.folder.trim();
+          // qty: a positive number sets a tracked pool; null/0 clears it back to an
+          // uncapped on-call service.
+          if (patch.qty !== undefined) {
+            if (typeof patch.qty === 'number' && patch.qty > 0) next.qty = patch.qty;
+            else delete next.qty;
+          }
+          return next;
+        }),
+      }));
+    },
+    removeResource(id) {
+      // Drops the resource from the catalog. Past bookings reference resources by
+      // name (free text), so existing events are untouched — this just retires it
+      // from the pickers.
+      commit((d) => ({ ...d, resources: d.resources.filter((r) => r.id !== id) }));
     },
     addPerson(p) {
       const person: PersonRec = { ...p, id: uid('p') };
