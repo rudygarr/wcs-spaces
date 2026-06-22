@@ -41,6 +41,8 @@ function withAudit(d: Database, e: Omit<AuditEntry, 'id' | 'at' | 'actor'>): Dat
 interface StoreCtx {
   db: Database;
   addRoom: (name: string, folder: string) => Room;
+  updateRoom: (id: string, patch: { name?: string; folder?: string; capacity?: number | null }) => void;
+  removeRoom: (id: string) => void;
   addResource: (name: string, folder: string, qty?: number) => Resource;
   updateResource: (id: string, patch: { name?: string; folder?: string; qty?: number | null }) => void;
   removeResource: (id: string) => void;
@@ -149,6 +151,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const room: Room = { id: uid('r'), name: name.trim(), folder };
       commit((d) => ({ ...d, rooms: [...d.rooms, room] }));
       return room;
+    },
+    updateRoom(id, patch) {
+      commit((d) => ({
+        ...d,
+        rooms: d.rooms.map((r) => {
+          if (r.id !== id) return r;
+          const next: Room = { ...r };
+          if (patch.name !== undefined) next.name = patch.name.trim();
+          if (patch.folder !== undefined) next.folder = patch.folder.trim();
+          // capacity: a positive number sets seats; null/0 clears it.
+          if (patch.capacity !== undefined) {
+            if (typeof patch.capacity === 'number' && patch.capacity > 0) next.capacity = patch.capacity;
+            else delete next.capacity;
+          }
+          return next;
+        }),
+      }));
+    },
+    removeRoom(id) {
+      // Retires the room from the catalog/pickers. Existing events reference rooms by
+      // name (free text), so their records are untouched — same as removeResource.
+      commit((d) => ({ ...d, rooms: d.rooms.filter((r) => r.id !== id) }));
     },
     addResource(name, folder, qty) {
       // A count makes it a tracked pool (availability + soft over-allocation, like

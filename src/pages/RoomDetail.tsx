@@ -1,11 +1,75 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { fmtTime, fmtDateShort, statusColor, DEMO_TODAY } from '../lib/data';
+import Modal, { field, primaryBtn } from '../components/Modal';
+import type { Room } from '../lib/types';
+
+function EditRoom({ room, folders, upcomingCount, onClose }: { room: Room; folders: string[]; upcomingCount: number; onClose: () => void }) {
+  const { updateRoom, removeRoom } = useStore();
+  const nav = useNavigate();
+  const [name, setName] = useState(room.name);
+  const [folder, setFolder] = useState(room.folder);
+  const [cap, setCap] = useState(room.capacity != null ? String(room.capacity) : '');
+  const [confirmDel, setConfirmDel] = useState(false);
+  function save() {
+    if (!name.trim() || !folder.trim()) return;
+    const n = parseInt(cap, 10);
+    updateRoom(room.id, { name, folder: folder.trim(), capacity: Number.isFinite(n) && n > 0 ? n : null });
+    onClose();
+  }
+  return (
+    <Modal title="Edit room" onClose={onClose}>
+      <label className="flabel">Room name</label>
+      <input style={field} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      <label className="flabel">Group</label>
+      <input style={field} list="room-folders" value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Pick or type a new group" />
+      <datalist id="room-folders">
+        {folders.map((f) => (
+          <option key={f} value={f} />
+        ))}
+      </datalist>
+      <label className="flabel">Capacity / seats (optional)</label>
+      <input style={field} type="number" min="1" inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="e.g. 250" />
+      <div className="field-hint">Used for the soft over-capacity warning when a booking's expected attendance exceeds the room.</div>
+      <button style={{ ...primaryBtn, marginTop: 18 }} onClick={save}>
+        Save changes
+      </button>
+      {confirmDel ? (
+        <div className="del-confirm">
+          <span>
+            Remove “{room.name}” from the catalog?
+            {upcomingCount > 0 && ` Its ${upcomingCount} upcoming booking${upcomingCount === 1 ? '' : 's'} keep their records, but the room leaves the pickers.`}
+          </span>
+          <div className="del-actions">
+            <button className="btn-soft" onClick={() => setConfirmDel(false)}>
+              Keep it
+            </button>
+            <button
+              className="btn-danger"
+              onClick={() => {
+                removeRoom(room.id);
+                nav('/spaces');
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="del-link" onClick={() => setConfirmDel(true)}>
+          <i className="ti ti-trash" /> Remove room
+        </button>
+      )}
+    </Modal>
+  );
+}
 
 export default function RoomDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const { db } = useStore();
+  const [editing, setEditing] = useState(false);
   const room = db.rooms.find((r) => r.id === id);
 
   if (!room) {
@@ -45,7 +109,10 @@ export default function RoomDetail() {
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '14px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, margin: '14px 0' }}>
+        <button className="btn-soft" onClick={() => setEditing(true)}>
+          <i className="ti ti-pencil" /> Edit
+        </button>
         <button className="fab" onClick={() => nav('/book')}>
           <i className="ti ti-plus" /> Book this room
         </button>
@@ -77,6 +144,15 @@ export default function RoomDetail() {
         ))}
       </div>
       <div style={{ height: 16 }} />
+
+      {editing && (
+        <EditRoom
+          room={room}
+          folders={[...new Set(db.rooms.map((r) => r.folder))]}
+          upcomingCount={upcoming.length}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </>
   );
 }
