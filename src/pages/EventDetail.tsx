@@ -167,7 +167,7 @@ export default function EventDetail() {
             <span className="act">{conflictPairs.filter((p) => !p.resolved).length} open</span>
           </div>
           {conflictPairs.map((p) => (
-            <ConflictThread key={p.key} conflictKey={p.key} other={p.other} room={p.room} resolved={p.resolved} buffer={p.buffer} />
+            <ConflictThread key={p.key} conflictKey={p.key} self={ev} other={p.other} room={p.room} resolved={p.resolved} buffer={p.buffer} />
           ))}
         </>
       )}

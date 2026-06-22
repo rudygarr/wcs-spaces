@@ -38,6 +38,20 @@ function withAudit(d: Database, e: Omit<AuditEntry, 'id' | 'at' | 'actor'>): Dat
   return { ...d, audit: [...(d.audit ?? []), auditEntry(e)] };
 }
 
+// Fields whose change can alter — or void — a previously "accepted" overlap.
+const CONFLICT_FIELDS: (keyof EventRec)[] = ['starts_at', 'ends_at', 'setup_starts', 'teardown_ends', 'rooms'];
+
+// When an event's time or room changes, any "accept" that had cleared a clash
+// involving it no longer reflects reality (the owners agreed to a *specific*
+// overlap, not whatever it just became). Drop those accept notes so the warning
+// returns for them to re-confirm. The conversation ('note') history is kept —
+// conflictKey is the sorted "aId|bId" pair, so split('|') recovers both ids.
+function invalidateAccepts(d: Database, id: string): Database {
+  const notes = d.conflictNotes ?? [];
+  const next = notes.filter((n) => !(n.kind === 'accept' && n.conflictKey.split('|').includes(id)));
+  return next.length === notes.length ? d : { ...d, conflictNotes: next };
+}
+
 interface StoreCtx {
   db: Database;
   addRoom: (name: string, folder: string) => Room;
@@ -51,6 +65,7 @@ interface StoreCtx {
   addEvent: (e: Omit<EventRec, 'id'>) => EventRec;
   addEvents: (list: Omit<EventRec, 'id'>[]) => EventRec[];
   updateEvent: (id: string, patch: Partial<EventRec>) => void;
+  moveEventRoom: (id: string, fromRoom: string, toRoom: string) => void;
   checkInEvent: (id: string) => void;
   releaseEvent: (id: string) => void;
   restoreEvent: (id: string) => void;
@@ -230,7 +245,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return evs;
     },
     updateEvent(id, patch) {
-      commit((d) => ({ ...d, events: d.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+      commit((d) => {
+        const nd = { ...d, events: d.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) };
+        // A time/room edit voids any prior "accept" for clashes this event was in.
+        return CONFLICT_FIELDS.some((f) => f in patch) ? invalidateAccepts(nd, id) : nd;
+      });
+    },
+    // Conflict resolution by relocation: swap one room on a booking for a free
+    // one (the "just move it" option in the conflict thread). Frees the contested
+    // room, voids any stale accept, and is audited.
+    moveEventRoom(id, fromRoom, toRoom) {
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === id);
+        if (!ev) return d;
+        const swapped = ev.rooms.includes(fromRoom)
+          ? ev.rooms.map((r) => (r === fromRoom ? toRoom : r))
+          : [...ev.rooms, toRoom];
+        const rooms = [...new Set(swapped)];
+        let nd: Database = { ...d, events: d.events.map((e) => (e.id === id ? { ...e, rooms } : e)) };
+        nd = invalidateAccepts(nd, id);
+        return withAudit(nd, {
+          action: 'Moved booking',
+          entityType: 'booking',
+          entityId: id,
+          entityLabel: ev.name,
+          detail: `${fromRoom} → ${toRoom}`,
+          link: `#/event/${id}`,
+        });
+      });
     },
     // Confirm the space is in use. Stamps DEMO_TODAY (demo-frame rule) and clears
     // any prior release.

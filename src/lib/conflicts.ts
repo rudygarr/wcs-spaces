@@ -1,5 +1,5 @@
 import type { Database, EventRec, TripLeg, WorkItem } from './types';
-import { findConflicts, eventsOnDay, DEMO_TODAY } from './data';
+import { findConflicts, eventsOnDay, occupancyWindow, DEMO_TODAY } from './data';
 
 // One place every surface asks "is this in conflict?" — so the warning on the
 // dashboard, the calendar, the queue, and a trip all agree. Conflicts are
@@ -81,6 +81,25 @@ export function eventInConflict(db: Database, e: EventRec): boolean {
   return findConflicts(dayEvents).some(
     (c) => (c.a.id === e.id || c.b.id === e.id) && !isConflictResolved(db, conflictKey(c.a.id, c.b.id)),
   );
+}
+
+// Rooms with no active booking overlapping this event's occupancy window — the
+// safe targets for "just move it" instead of sharing. Mirrors findConflicts'
+// exclusions (declined / released / cancelled / public-feed / annotation rows
+// don't hold a room), and skips rooms the event already has. Buffer-aware via
+// occupancyWindow, so a room mid-teardown isn't offered as free.
+export function roomsFreeFor(db: Database, e: EventRec): string[] {
+  if (!e.starts_at) return [];
+  const win = occupancyWindow(e);
+  const busy = new Set<string>();
+  for (const o of db.events) {
+    if (o.id === e.id || !o.starts_at) continue;
+    if (o.all_day || o.status === 'Declined' || o.released || o.cancelled) continue;
+    if (o.source === 'public' || o.name.trim().startsWith('(')) continue;
+    const ow = occupancyWindow(o);
+    if (ow.start < win.end && win.start < ow.end) for (const r of o.rooms) busy.add(r);
+  }
+  return db.rooms.map((r) => r.name).filter((name) => !e.rooms.includes(name) && !busy.has(name));
 }
 
 // ---- Directory badges: is this room / resource contested right now? ----
