@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { fmtDateLong, fmtTime } from '../lib/data';
+import { busOfInvite, busLabel } from '../lib/camps';
 import helmetMark from '../assets/brand/warrior-helmet.png';
 import type { InviteStatus } from '../lib/types';
 
@@ -38,6 +39,9 @@ export default function Rsvp() {
               <div><i className="ti ti-clock" /> {ev.all_day ? 'All day' : `${fmtTime(ev.starts_at)} – ${fmtTime(ev.ends_at)}`}</div>
               {ev.location && <div><i className="ti ti-map-pin" /> {ev.location}</div>}
             </div>
+            {(() => { const bus = busOfInvite(db, invite); return bus ? (
+              <div className="rsvp-bus"><i className="ti ti-bus" /> Your bus: <strong>{busLabel(bus)}</strong>{bus.departInfo ? <span> · {bus.departInfo}</span> : null}</div>
+            ) : null; })()}
             {ev.details && <div className="rsvp-details">{ev.details}</div>}
 
             {done ? (

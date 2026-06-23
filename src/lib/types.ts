@@ -131,11 +131,27 @@ export interface EventInvite {
   name: string; // display name, always present
   email?: string; // external (no-account) invitee — the emailed-link path
   role?: string; // optional label, e.g. "Proctor", "Camper", "Bus 1"
+  busId?: string; // camp roster: which CampBus this camper is assigned to
   status: InviteStatus;
   invitedAt: string;
   respondedAt?: string;
   remindedAt?: string; // when the day-of reminder fired
   note?: string; // optional message from the organizer
+}
+
+// A chartered bus for a sleep-away camp (Warrior Week, GR8 Escape). It's a
+// rental — not the school's fleet — created ad-hoc for the camp, and surfaced
+// as a room so campers can be invited/assigned to it and know which bus is
+// theirs. The roster is the set of EventInvites carrying this busId.
+export interface CampBus {
+  id: string;
+  eventId: string; // the camp event this bus serves
+  roomId?: string; // the matching rental Room created for it
+  name: string; // "Bus 1"
+  label?: string; // theme/crew/color, e.g. "Coral Crew"
+  capacity?: number;
+  rentalOrg?: string; // the charter company
+  departInfo?: string; // "Departs 7:30 AM · Main Lot"
 }
 
 // A thin umbrella over many child sessions, where each session is a real
@@ -215,6 +231,10 @@ export interface Room {
   name: string;
   folder: string;
   capacity?: number; // max occupancy; absent = uncapped / not tracked
+  // A camp bus surfaced as a room (so "everything is a space"). `rental` marks
+  // it as a chartered bus, NOT the school's own fleet — created ad-hoc per camp.
+  isBus?: boolean;
+  rental?: boolean;
 }
 
 export interface Resource {
@@ -565,6 +585,8 @@ export interface Database {
   // Event invitations (staff meetings, AP tests, bus rosters). Internal +
   // external (no-account) guests; see lib/invites.
   invites?: EventInvite[];
+  // Chartered camp buses (rental) surfaced as rooms; see lib/camps.
+  campBuses?: CampBus[];
   // Security: scheduled guard shifts (security-visitor-scope). Visitor sign-ins
   // are deliberately NOT here — they live in session memory only, never on disk.
   guardShifts?: GuardShift[];

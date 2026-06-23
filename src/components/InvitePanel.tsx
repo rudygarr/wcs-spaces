@@ -3,7 +3,8 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { initials } from '../lib/session';
 import { dayKey, DEMO_TODAY } from '../lib/data';
-import { invitesFor, rsvpSummary, rsvpLabel } from '../lib/invites';
+import { invitesFor, rsvpLabel } from '../lib/invites';
+import { busesFor } from '../lib/camps';
 import type { EventRec, InviteStatus } from '../lib/types';
 import Modal, { field, primaryBtn } from './Modal';
 
@@ -19,15 +20,24 @@ export default function InvitePanel({ ev }: { ev: EventRec }) {
   const { user } = useSession();
   const [showInvite, setShowInvite] = useState(false);
 
-  const invites = invitesFor(db, ev.id);
-  const summary = rsvpSummary(db, ev.id);
+  // Camp roster invites (busId set) are managed in the bus panel — exclude them
+  // here so we don't list every camper twice.
+  const invites = invitesFor(db, ev.id).filter((i) => !i.busId);
+  const summary = {
+    total: invites.length,
+    accepted: invites.filter((i) => i.status === 'accepted').length,
+    declined: invites.filter((i) => i.status === 'declined').length,
+    tentative: invites.filter((i) => i.status === 'tentative').length,
+    noReply: invites.filter((i) => i.status === 'invited').length,
+  };
   const canManage = user.site_admin || user.resolves_conflicts || ev.owner === user.name;
   const isToday = ev.starts_at ? dayKey(new Date(ev.starts_at)) === dayKey(DEMO_TODAY) : false;
   const dueNow = invites.filter((i) => i.status === 'invited' && !i.remindedAt).length;
+  const isCampWithBuses = busesFor(db, ev.id).length > 0;
 
-  // Zero-footprint until someone opts in (the iron rule): if there are no
-  // invites and you can't manage, render nothing.
-  if (invites.length === 0 && !canManage) return null;
+  // Zero-footprint: hide if there's nothing to show and either you can't manage
+  // or this is a camp (where invites live in the bus panel instead).
+  if (invites.length === 0 && (!canManage || isCampWithBuses)) return null;
 
   return (
     <div className="inv-panel">

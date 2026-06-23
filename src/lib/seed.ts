@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite, CampBus, Room,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 31;
+export const SEED_VERSION = 32;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -821,6 +821,64 @@ function seedInvites(people: PersonRec[]): { events: EventRec[]; invites: EventI
   return { events, invites };
 }
 
+// ---- Camp buses demo ----
+// Sleep-away camps charter buses (rental — not the school's fleet) and the kids
+// get assigned to one so they know which bus is theirs. Buses surface as rental
+// rooms; the roster is invites carrying a busId. GR8 Escape already exists as a
+// notice (n-0); Warrior Week is added here.
+function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[]; rooms: Room[]; invites: EventInvite[] } {
+  const pid = (name: string) => people.find((p) => p.name === name)?.id;
+  const now = DEMO_TODAY.toISOString();
+
+  const events: EventRec[] = [
+    {
+      ...base, id: 'camp-ww', name: 'Warrior Week — HS Retreat', kind: 'notice', all_day: true,
+      starts_at: '2026-09-23T00:00:00-04:00', ends_at: '2026-09-25T00:00:00-04:00',
+      location: 'Off campus — Lake Aurora Retreat', owner: 'High School Office', audience: 'High School',
+      rooms: [], resources: ['Transportation'], category: 'Community',
+      details: 'Annual high-school overnight retreat. Buses are chartered — check your bus assignment below.',
+    },
+  ];
+
+  // bus + its matching rental room, generated together so ids line up.
+  let bn = 0;
+  const buses: CampBus[] = [];
+  const rooms: Room[] = [];
+  const bus = (eventId: string, name: string, label: string, capacity: number, rentalOrg: string, departInfo: string) => {
+    const id = `cb-${++bn}`;
+    const roomId = `busroom-${bn}`;
+    buses.push({ id, eventId, roomId, name, label, capacity, rentalOrg, departInfo });
+    rooms.push({ id: roomId, name: `${name} — ${label}`, folder: 'Camp buses (rental)', isBus: true, rental: true, capacity });
+    return id;
+  };
+  const g1 = bus('n-0', 'Bus 1', 'Coral Crew', 24, 'Sunshine Charters', 'Departs 7:30 AM · Main Lot');
+  const g2 = bus('n-0', 'Bus 2', 'Mangrove Crew', 24, 'Sunshine Charters', 'Departs 7:30 AM · Main Lot');
+  const w1 = bus('camp-ww', 'Bus 1', 'Gold Squad', 30, 'Gold Coast Coach', 'Departs 8:00 AM · Gym Lot');
+  const w2 = bus('camp-ww', 'Bus 2', 'Green Squad', 30, 'Gold Coast Coach', 'Departs 8:00 AM · Gym Lot');
+
+  let rn = 0;
+  const camper = (eventId: string, busId: string, name: string, status: EventInvite['status'], email?: string): EventInvite => ({
+    id: `camp-inv-${++rn}`, eventId, busId, name,
+    personId: email ? undefined : pid(name), email,
+    role: 'Camper', status, invitedAt: now, respondedAt: status === 'invited' ? undefined : now,
+  });
+  const invites: EventInvite[] = [
+    // GR8 Escape — a couple internal students, the rest external (no account).
+    camper('n-0', g1, 'Eli Robinson', 'accepted'),
+    camper('n-0', g1, 'Jordan Blake', 'accepted', 'jblake@demo.wcsmiami.org'),
+    camper('n-0', g1, 'Mia Torres', 'accepted', 'mtorres@demo.wcsmiami.org'),
+    camper('n-0', g2, 'Sofia Marin', 'accepted'),
+    camper('n-0', g2, 'Liam Carter', 'invited', 'lcarter@demo.wcsmiami.org'),
+    camper('n-0', g2, 'Zoe Bennett', 'accepted', 'zbennett@demo.wcsmiami.org'),
+    // Warrior Week — HS students.
+    camper('camp-ww', w1, 'Ava Whitfield', 'accepted', 'awhitfield@demo.wcsmiami.org'),
+    camper('camp-ww', w1, 'Noah Park', 'accepted'),
+    camper('camp-ww', w2, 'Maria Soto', 'accepted', 'msoto@demo.wcsmiami.org'),
+    camper('camp-ww', w2, 'Caleb Nguyen', 'invited', 'cnguyen2@demo.wcsmiami.org'),
+  ];
+  return { events, buses, rooms, invites };
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -860,11 +918,12 @@ export function buildSeed(): Database {
   const rentalsSeed = seedRentals();
   const programsSeed = seedPrograms();
   const invitesSeed = seedInvites(people);
+  const campsSeed = seedCamps(people);
   return {
-    rooms,
+    rooms: [...rooms, ...campsSeed.rooms],
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events, ...security.events, ...invitesSeed.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events, ...security.events, ...invitesSeed.events, ...campsSeed.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
@@ -883,7 +942,8 @@ export function buildSeed(): Database {
     blockouts: crew.blockouts,
     programs: programsSeed.programs,
     guardShifts: security.shifts,
-    invites: invitesSeed.invites,
+    invites: [...invitesSeed.invites, ...campsSeed.invites],
+    campBuses: campsSeed.buses,
     seedVersion: SEED_VERSION,
   };
 }

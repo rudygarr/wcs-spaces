@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus, CampBus } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -109,11 +109,15 @@ interface StoreCtx {
   submitProgram: (id: string) => void;
   cancelProgram: (id: string, cancelled: boolean) => void;
   // Event invites
-  inviteToEvent: (eventId: string, who: { personId?: string; name: string; email?: string; role?: string; note?: string }) => void;
+  inviteToEvent: (eventId: string, who: { personId?: string; name: string; email?: string; role?: string; note?: string; busId?: string }) => void;
   respondInvite: (inviteId: string, status: InviteStatus) => void;
   removeInvite: (inviteId: string) => void;
   remindInvite: (inviteId: string) => void;
   remindAllDue: (eventId: string) => number;
+  // Camp buses (rental, surfaced as rooms)
+  addCampBus: (eventId: string, bus: { name: string; label?: string; capacity?: number; rentalOrg?: string; departInfo?: string }) => void;
+  removeCampBus: (busId: string) => void;
+  assignToBus: (inviteId: string, busId: string | undefined) => void;
   reset: () => void;
 }
 
@@ -775,7 +779,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     inviteToEvent(eventId, who) {
       const invite: EventInvite = {
         id: uid('inv'), eventId, personId: who.personId, name: who.name,
-        email: who.email, role: who.role, note: who.note,
+        email: who.email, role: who.role, note: who.note, busId: who.busId,
         status: 'invited', invitedAt: DEMO_TODAY.toISOString(),
       };
       commit((d) => {
@@ -890,6 +894,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       });
       return n;
+    },
+    // ---- Camp buses (rental, surfaced as rooms) ----
+    // Charter a bus for a camp. It's added as a rental Room too, so "everything
+    // is a space" — campers get assigned to it and it shows in Spaces, clearly
+    // marked rental (not the school's fleet).
+    addCampBus(eventId, bus) {
+      const roomId = uid('busroom');
+      const cb: CampBus = {
+        id: uid('bus'), eventId, roomId, name: bus.name.trim(),
+        label: bus.label?.trim() || undefined, capacity: bus.capacity,
+        rentalOrg: bus.rentalOrg?.trim() || undefined, departInfo: bus.departInfo?.trim() || undefined,
+      };
+      const room: Room = {
+        id: roomId, name: cb.label ? `${cb.name} — ${cb.label}` : cb.name,
+        folder: 'Camp buses (rental)', isBus: true, rental: true,
+        ...(bus.capacity ? { capacity: bus.capacity } : {}),
+      };
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        return withAudit({ ...d, campBuses: [...(d.campBuses ?? []), cb], rooms: [...d.rooms, room] }, {
+          action: 'Added camp bus', entityType: 'booking', entityId: eventId, entityLabel: ev?.name ?? 'Camp',
+          detail: `${cb.name}${cb.rentalOrg ? ` · ${cb.rentalOrg}` : ''}`, link: `#/event/${eventId}`,
+        });
+      });
+    },
+    removeCampBus(busId) {
+      commit((d) => {
+        const bus = (d.campBuses ?? []).find((b) => b.id === busId);
+        return {
+          ...d,
+          campBuses: (d.campBuses ?? []).filter((b) => b.id !== busId),
+          rooms: d.rooms.filter((r) => r.id !== bus?.roomId),
+          // Un-assign anyone who was on it (their invite stays, bus cleared).
+          invites: (d.invites ?? []).map((i) => (i.busId === busId ? { ...i, busId: undefined } : i)),
+        };
+      });
+    },
+    // Move a camper onto (or off, busId undefined) a bus.
+    assignToBus(inviteId, busId) {
+      commit((d) => ({
+        ...d,
+        invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, busId } : i)),
+      }));
     },
     reset() {
       void clearDB();
