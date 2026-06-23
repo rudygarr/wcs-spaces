@@ -10,6 +10,7 @@ import Requests from './pages/Requests';
 import Book from './pages/Book';
 import RoomDetail from './pages/RoomDetail';
 import EventDetail from './pages/EventDetail';
+import RunSheet from './pages/RunSheet';
 import People from './pages/People';
 import PersonDetail from './pages/PersonDetail';
 import AthleticsWeek from './pages/AthleticsWeek';
@@ -56,6 +57,7 @@ function Gate() {
           <Route path="/book" element={<Book />} />
           <Route path="/room/:id" element={<RoomDetail />} />
           <Route path="/event/:id" element={<EventDetail />} />
+          <Route path="/runsheet/:id" element={<RunSheet />} />
         </Routes>
       </Shell>
     </HashRouter>

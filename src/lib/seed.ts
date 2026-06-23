@@ -10,7 +10,7 @@ import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNo
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 24;
+export const SEED_VERSION = 25;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -606,6 +606,76 @@ const notices: EventRec[] = [
     category: 'Community',
     setupStyle: 'theater',
     assignments: [{ role: 'AV Support', person: 'Rudy Garrido', status: 'Approved' }],
+    runSheet: {
+      start: '08:25',
+      segments: [
+        {
+          id: 'cs-1',
+          durationMin: 5,
+          title: 'Doors / pre-service music',
+          who: 'House & ushers',
+          crew: [{ role: 'A1 (audio)', person: 'Rudy Garrido', call: '07:45' }],
+          cues: [{ dept: 'AUD', action: 'Walk-in playlist up, house music' }],
+        },
+        {
+          id: 'cs-2',
+          durationMin: 5,
+          title: 'Welcome & call to worship',
+          who: 'Head of School',
+          cues: [
+            { dept: 'AUD', action: 'Mic 1 (podium) live, walk-in music out' },
+            { dept: 'VID', action: 'Lower-third: speaker name' },
+          ],
+        },
+        {
+          id: 'cs-3',
+          durationMin: 15,
+          title: 'Worship set',
+          who: 'Worship band',
+          notes: '2 songs — band provides their own input list.',
+          crew: [{ role: 'ProPresenter', person: 'Student tech', call: '08:00' }],
+          cues: [
+            { dept: 'LX', action: 'Stage wash 80%, house to 25%' },
+            { dept: 'VID', action: 'Roll song lyrics' },
+            { dept: 'AUD', action: 'Band mics + IEM mix' },
+          ],
+        },
+        {
+          id: 'cs-4',
+          durationMin: 5,
+          title: 'Scripture & prayer',
+          who: 'Chaplain',
+          cues: [{ dept: 'VID', action: 'Scripture slide (1 Peter 4:10–11)' }],
+        },
+        {
+          id: 'cs-5',
+          durationMin: 20,
+          title: 'Convocation address',
+          who: 'Head of School',
+          cues: [
+            { dept: 'VID', action: 'Presentation deck — advance on speaker' },
+            { dept: 'LX', action: 'Podium special up, stage wash down' },
+          ],
+        },
+        {
+          id: 'cs-6',
+          durationMin: 5,
+          title: 'Charge & benediction',
+          who: 'Chaplain',
+          cues: [{ dept: 'AUD', action: 'Mic 1 live' }],
+        },
+        {
+          id: 'cs-7',
+          durationMin: 10,
+          title: 'Alma mater & dismissal',
+          who: 'Worship band',
+          cues: [
+            { dept: 'AUD', action: 'Recessional music up' },
+            { dept: 'LX', action: 'House lights to full' },
+          ],
+        },
+      ],
+    },
   },
   {
     ...base,

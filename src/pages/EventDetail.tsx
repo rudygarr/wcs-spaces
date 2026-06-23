@@ -10,6 +10,7 @@ import { conflictKey, isConflictResolved } from '../lib/conflicts';
 import { buildICS, downloadICS, slug } from '../lib/ics';
 import { ConflictThread } from '../components/ConflictThread';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
+import { rollTimes, fmtMin, fmtDur, totalRuntime, printRunSheet, CUE_META } from '../lib/runsheet';
 import AuditHistory from '../components/AuditHistory';
 import RequestThread from '../components/RequestThread';
 import type { ApprovalRec, EventRec } from '../lib/types';
@@ -60,6 +61,11 @@ export default function EventDetail() {
   // reclaim the slot.
   const ciState = checkinState(ev, DEMO_TODAY);
   const canManageCheckin = isOverride || ev.owner === user.name;
+
+  // Run-of-show: the owner, anyone assigned to the event (AV/crew), or an admin
+  // can build/edit it. Everyone can read it.
+  const canEditRun =
+    isOverride || ev.owner === user.name || (ev.assignments?.some((a) => a.person === user.name) ?? false);
 
   // Recurring-series management (item S4). When this booking is one occurrence of
   // a series, the owner/admin can move, cancel, or reinstate the run — scoped to
@@ -355,6 +361,79 @@ export default function EventDetail() {
             </span>
           </div>
         </>
+      )}
+
+      {/* ---- Run of show ---- */}
+      <div className="section-label" style={{ marginTop: 22 }}>
+        <span className="lbl">Run of show</span>
+        {ev.runSheet && ev.runSheet.segments.length > 0 && (
+          <span className="act">{fmtDur(totalRuntime(ev.runSheet))}</span>
+        )}
+      </div>
+      {ev.runSheet && ev.runSheet.segments.length > 0 ? (
+        <>
+          <div className="ros-view">
+            {rollTimes(ev.runSheet).map(({ seg, startMin }) => (
+              <div className="ros-vrow" key={seg.id}>
+                <div className="ros-vtime">
+                  <span className="ros-vstart">{fmtMin(startMin)}</span>
+                  <span className="ros-vdur">{fmtDur(seg.durationMin)}</span>
+                </div>
+                <div className="ros-vbody">
+                  <div className="ros-vtitle">{seg.title || 'Untitled segment'}</div>
+                  {seg.who && <div className="ros-vwho">{seg.who}</div>}
+                  {seg.notes && <div className="ros-vnotes">{seg.notes}</div>}
+                  {(seg.crew?.length ?? 0) > 0 && (
+                    <div className="ros-vchips">
+                      {seg.crew!.map((c, i) => (
+                        <span className="ros-chip ros-chip-crew" key={i}>
+                          <i className="ti ti-user" />
+                          {c.role ? `${c.role}: ` : ''}
+                          {c.person}
+                          {c.call ? ` · ${c.call}` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {(seg.cues?.length ?? 0) > 0 && (
+                    <div className="ros-vchips">
+                      {seg.cues!.map((q, i) => (
+                        <span
+                          className="ros-chip"
+                          key={i}
+                          style={{ color: CUE_META[q.dept].color, borderColor: 'color-mix(in srgb, ' + CUE_META[q.dept].color + ' 40%, transparent)' }}
+                        >
+                          <i className={'ti ' + CUE_META[q.dept].icon} />
+                          {CUE_META[q.dept].label}: {q.action}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+            <button
+              className="btn-soft"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={() => printRunSheet(ev.name, ev.starts_at ? fmtDateLong(new Date(ev.starts_at)) : '', ev.runSheet!)}
+            >
+              <i className="ti ti-printer" /> Print
+            </button>
+            {canEditRun && (
+              <button className="btn-soft" style={{ flex: 1, justifyContent: 'center' }} onClick={() => nav(`/runsheet/${ev.id}`)}>
+                <i className="ti ti-edit" /> Edit run sheet
+              </button>
+            )}
+          </div>
+        </>
+      ) : canEditRun ? (
+        <button className="btn-soft" style={{ width: '100%', justifyContent: 'center' }} onClick={() => nav(`/runsheet/${ev.id}`)}>
+          <i className="ti ti-list-numbers" /> Add a run sheet
+        </button>
+      ) : (
+        <div className="page-sub" style={{ fontSize: 13 }}>No run sheet yet.</div>
       )}
 
       {(ev.assignments?.length ?? 0) > 0 && (

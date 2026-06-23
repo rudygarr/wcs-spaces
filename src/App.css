@@ -2656,6 +2656,206 @@
   white-space: nowrap;
 }
 
+/* ---- Run of show (read view on EventDetail) ---- */
+.ros-view {
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+.ros-vrow {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 0.5px solid var(--border);
+}
+.ros-vrow:last-child { border-bottom: 0; }
+.ros-vtime {
+  flex-shrink: 0;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+}
+.ros-vstart { font-weight: 700; font-size: 14px; color: var(--green); }
+.ros-vdur { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.ros-vbody { flex: 1; min-width: 0; }
+.ros-vtitle { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.ros-vwho { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+.ros-vnotes { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.ros-vchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ros-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.ros-chip i { font-size: 12px; }
+.ros-chip-crew { color: var(--text-2); }
+
+/* ---- Run of show (editor) ---- */
+.ros-startbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.ros-startlbl { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; color: var(--text-1); }
+.ros-startlbl i { color: var(--green); }
+.ros-startinput {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ros-starttot { margin-left: auto; font-size: 13px; color: var(--text-3); }
+
+.ros-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.ros-seg {
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.ros-seg-main { display: flex; gap: 10px; padding: 12px; align-items: flex-start; }
+.ros-time { flex-shrink: 0; width: 64px; display: flex; flex-direction: column; padding-top: 8px; }
+.ros-time-start { font-weight: 700; font-size: 13px; color: var(--green); }
+.ros-time-dur { font-size: 11px; color: var(--text-3); }
+.ros-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.ros-title-input {
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ros-row2 { display: flex; gap: 8px; align-items: center; }
+.ros-durwrap { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
+.ros-dur-input {
+  width: 56px;
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  text-align: center;
+}
+.ros-who-input {
+  flex: 1;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.ros-seg-tools { flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+.ros-iconbtn {
+  width: 30px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ros-iconbtn:disabled { opacity: 0.35; cursor: default; }
+.ros-iconbtn.ros-del { color: var(--bad); }
+.ros-iconbtn i { font-size: 16px; }
+
+.ros-expand {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-top: 0.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ros-expand-badges { display: inline-flex; gap: 8px; margin-left: auto; }
+.ros-mini { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--text-3); }
+.ros-mini i { font-size: 13px; }
+
+.ros-body { padding: 12px; border-top: 0.5px solid var(--border); background: var(--surface); }
+.ros-notes {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  resize: vertical;
+  font-family: inherit;
+}
+.ros-sub-h { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); margin: 12px 0 6px; }
+.ros-crew-row, .ros-cue-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.ros-in {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  min-width: 0;
+}
+.ros-in-role { flex: 1; }
+.ros-in-person { flex: 1.2; }
+.ros-in-call { width: 96px; flex-shrink: 0; }
+.ros-in-dept { width: 104px; flex-shrink: 0; font-weight: 600; }
+.ros-in-cue { flex: 1; }
+.ros-addrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--green);
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.ros-add {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ros-foot { margin-top: 12px; font-size: 13px; color: var(--text-2); text-align: center; }
+
 /* ---- Print / PDF export ---- */
 @media print {
   .topbar,

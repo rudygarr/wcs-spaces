@@ -67,6 +67,43 @@ export interface WcsEvent {
   // A cancelled occurrence (reversible) — frees its room/stock and drops out of
   // approval queues, but stays visible (struck through) so the change is legible.
   cancelled?: boolean;
+  // The production run sheet ("run of show"): a timed rundown of segments. Each
+  // segment is the spine; it can carry its own crew (call sheet) and tech cues
+  // (cue sheet). The clock rolls from `start` (wall-clock HH:MM) down the
+  // durations, so editing one segment cascades the rest — how rundowns actually
+  // work. Absent = no run sheet yet.
+  runSheet?: RunSheet;
+}
+
+// A tech cue tied to a run-of-show segment — the discipline (audio/video/etc.)
+// and what happens. The deepest A-V layer.
+export type CueDept = 'AUD' | 'VID' | 'LX' | 'SCB' | 'STG' | 'OTHER';
+export interface RunCue {
+  dept: CueDept;
+  action: string;
+}
+
+// A crew slot for a segment — the call-sheet layer. `call` is when that person
+// is needed on deck (wall-clock HH:MM), which can lead the segment's start.
+export interface RunCrewSlot {
+  role: string;
+  person: string;
+  call?: string;
+}
+
+export interface RunSegment {
+  id: string;
+  durationMin: number; // length of this segment; drives the rolling clock
+  title: string;
+  who?: string; // quick lead/owner note shown inline on the row
+  notes?: string;
+  crew?: RunCrewSlot[];
+  cues?: RunCue[];
+}
+
+export interface RunSheet {
+  start: string; // wall-clock HH:MM (24h) the show begins; the clock rolls from here
+  segments: RunSegment[];
 }
 
 export interface ApprovalRec {
