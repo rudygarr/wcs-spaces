@@ -13,6 +13,7 @@ import { pmDueCount } from '../lib/assets';
 import { checkinState } from '../lib/checkin';
 import { rentalFollowups, uncollectedTotal, money } from '../lib/rentals';
 import { pendingForPerson } from '../lib/crew';
+import { pendingInviteCount } from '../lib/invites';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -158,6 +159,7 @@ export default function Home() {
   const myCrewRequests = pendingForPerson(db, user.id).length;
   const hasTeams = (db.crewTeams ?? []).length > 0;
   const hasPrograms = (db.programs ?? []).length > 0;
+  const myInviteCount = pendingInviteCount(db, user.id);
   const canSeePM = user.site_admin || user.department === 'Maintenance';
   const pmDue = pmDueCount(db);
   // Check-in: my bookings happening now that still need confirmation.
@@ -409,6 +411,23 @@ export default function Home() {
           <span className="body">
             <span className="title" style={{ color: 'var(--green)' }}>Serving requests</span>
             <span className="sub">{myCrewRequests} waiting on your Accept / Decline</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {myInviteCount > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/invites')}
+          style={{ width: '100%', background: 'var(--green-tint)', border: '0.5px solid var(--green)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0, background: 'var(--green)' }}>
+            <i className="ti ti-mail" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--green)' }}>Invitations</span>
+            <span className="sub">{myInviteCount} waiting on your RSVP</span>
           </span>
           <i className="ti ti-chevron-right chev" />
         </button>

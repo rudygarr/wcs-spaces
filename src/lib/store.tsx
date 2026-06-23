@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -108,6 +108,12 @@ interface StoreCtx {
   detachSession: (eventId: string) => void;
   submitProgram: (id: string) => void;
   cancelProgram: (id: string, cancelled: boolean) => void;
+  // Event invites
+  inviteToEvent: (eventId: string, who: { personId?: string; name: string; email?: string; role?: string; note?: string }) => void;
+  respondInvite: (inviteId: string, status: InviteStatus) => void;
+  removeInvite: (inviteId: string) => void;
+  remindInvite: (inviteId: string) => void;
+  remindAllDue: (eventId: string) => number;
   reset: () => void;
 }
 
@@ -760,6 +766,130 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           detail: `${n} session${n === 1 ? '' : 's'}`, link: `#/program/${id}`,
         });
       });
+    },
+    // ---- Event invites ----
+    // Invite one person to an event. Internal invitees (with an account) get a
+    // notification on their channels and can RSVP in-app; external guests get an
+    // emailed RSVP link to a no-login accept page (simulated here as an email
+    // channel). Either way an invite row tracks their reply.
+    inviteToEvent(eventId, who) {
+      const invite: EventInvite = {
+        id: uid('inv'), eventId, personId: who.personId, name: who.name,
+        email: who.email, role: who.role, note: who.note,
+        status: 'invited', invitedAt: DEMO_TODAY.toISOString(),
+      };
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        const nd = withAudit({ ...d, invites: [...(d.invites ?? []), invite] }, {
+          action: 'Invited to event', entityType: 'booking', entityId: eventId, entityLabel: ev?.name ?? 'Event',
+          detail: who.name, link: `#/event/${eventId}`,
+        });
+        // Internal account → in-app + their channels. (External email is shown
+        // in the invite row UI; there's no notification recipient to route to.)
+        if (who.personId) {
+          const person = d.people.find((p) => p.id === who.personId);
+          if (person && ev) {
+            const notif: Notif = {
+              id: uid('n'), to: person.name, kind: 'invite',
+              title: `Invitation — ${ev.name}`,
+              body: who.note || 'Tap to RSVP', link: `#/invites`,
+              createdAt: DEMO_TODAY.toISOString(), channels: channelsFor(person),
+            };
+            return { ...nd, notifications: [...nd.notifications, notif] };
+          }
+        }
+        return nd;
+      });
+    },
+    // RSVP (works for both the in-app My-invites screen and the public link).
+    respondInvite(inviteId, status) {
+      commit((d) => {
+        const inv = (d.invites ?? []).find((i) => i.id === inviteId);
+        if (!inv) return d;
+        const nd = {
+          ...d,
+          invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, status, respondedAt: DEMO_TODAY.toISOString() } : i)),
+        };
+        const ev = d.events.find((e) => e.id === inv.eventId);
+        const withLog = withAudit(nd, {
+          action: `RSVP ${status}`, entityType: 'booking', entityId: inv.eventId, entityLabel: ev?.name ?? 'Event',
+          detail: inv.name, link: `#/event/${inv.eventId}`,
+        });
+        // Let the organizer know how each guest replied.
+        if (ev?.owner) {
+          return { ...withLog, notifications: [...withLog.notifications, {
+            id: uid('n'), to: ev.owner, kind: 'invite' as const,
+            title: `${inv.name} ${status} — ${ev.name}`, link: `#/event/${inv.eventId}`,
+            createdAt: DEMO_TODAY.toISOString(),
+          }] };
+        }
+        return withLog;
+      });
+    },
+    removeInvite(inviteId) {
+      commit((d) => ({ ...d, invites: (d.invites ?? []).filter((i) => i.id !== inviteId) }));
+    },
+    // Day-of reminder for a single invitee who hasn't replied. Re-pings an
+    // internal account; for an external guest it "resends the email."
+    remindInvite(inviteId) {
+      commit((d) => {
+        const inv = (d.invites ?? []).find((i) => i.id === inviteId);
+        if (!inv) return d;
+        const ev = d.events.find((e) => e.id === inv.eventId);
+        const nd = {
+          ...d,
+          invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, remindedAt: DEMO_TODAY.toISOString() } : i)),
+        };
+        const withLog = withAudit(nd, {
+          action: 'Sent day-of reminder', entityType: 'booking', entityId: inv.eventId, entityLabel: ev?.name ?? 'Event',
+          detail: inv.name, link: `#/event/${inv.eventId}`,
+        });
+        if (inv.personId) {
+          const person = d.people.find((p) => p.id === inv.personId);
+          if (person && ev) {
+            return { ...withLog, notifications: [...withLog.notifications, {
+              id: uid('n'), to: person.name, kind: 'invite' as const,
+              title: `Reminder — ${ev.name} is today`, body: 'You haven’t RSVP’d yet — tap to reply',
+              link: `#/invites`, createdAt: DEMO_TODAY.toISOString(), channels: channelsFor(person),
+            }] };
+          }
+        }
+        return withLog;
+      });
+    },
+    // Fire reminders to everyone on an event who still hasn't replied. Returns
+    // how many went out.
+    remindAllDue(eventId) {
+      let n = 0;
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        const now = DEMO_TODAY.toISOString();
+        const targets = (d.invites ?? []).filter((i) => i.eventId === eventId && i.status === 'invited' && !i.remindedAt);
+        n = targets.length;
+        if (!n) return d;
+        const targetIds = new Set(targets.map((t) => t.id));
+        const newNotifs: Notif[] = [];
+        for (const t of targets) {
+          if (t.personId) {
+            const person = d.people.find((p) => p.id === t.personId);
+            if (person && ev) newNotifs.push({
+              id: uid('n'), to: person.name, kind: 'invite',
+              title: `Reminder — ${ev.name} is today`, body: 'You haven’t RSVP’d yet — tap to reply',
+              link: `#/invites`, createdAt: now, channels: channelsFor(person),
+            });
+          }
+        }
+        const nd = {
+          ...d,
+          invites: (d.invites ?? []).map((i) => (targetIds.has(i.id) ? { ...i, remindedAt: now } : i)),
+          notifications: [...d.notifications, ...newNotifs],
+        };
+        return withAudit(nd, {
+          action: `Sent ${n} day-of reminder${n === 1 ? '' : 's'}`, entityType: 'booking', entityId: eventId,
+          entityLabel: ev?.name ?? 'Event', link: `#/event/${eventId}`,
+        });
+      });
+      return n;
     },
     reset() {
       void clearDB();

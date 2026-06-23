@@ -14,6 +14,7 @@ import { rollTimes, fmtMin, fmtDur, totalRuntime, printRunSheet, CUE_META } from
 import AuditHistory from '../components/AuditHistory';
 import RequestThread from '../components/RequestThread';
 import CrewBoard from '../components/CrewBoard';
+import InvitePanel from '../components/InvitePanel';
 import { programOf } from '../lib/programs';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
@@ -526,6 +527,10 @@ export default function EventDetail() {
 
       <div style={{ marginTop: 14 }}>
         <CrewBoard ev={ev} />
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <InvitePanel ev={ev} />
       </div>
 
       {(ev.assignments?.length ?? 0) > 0 && (

@@ -32,10 +32,24 @@ import MySchedule from './pages/MySchedule';
 import Programs from './pages/Programs';
 import ProgramDetail from './pages/ProgramDetail';
 import Security from './pages/Security';
+import MyInvites from './pages/MyInvites';
+import Rsvp from './pages/Rsvp';
 import './App.css';
 
 function Gate() {
   const { authed } = useSession();
+  // Public RSVP link — the emailed invite for guests without an account. Lives
+  // outside the auth gate; an external guest lands here straight from email.
+  if (typeof window !== 'undefined' && window.location.hash.startsWith('#/rsvp/')) {
+    return (
+      <HashRouter>
+        <Routes>
+          <Route path="/rsvp/:id" element={<Rsvp />} />
+          <Route path="*" element={<Rsvp />} />
+        </Routes>
+      </HashRouter>
+    );
+  }
   if (!authed) return <Login />;
   return (
     <HashRouter>
@@ -65,6 +79,7 @@ function Gate() {
           <Route path="/programs" element={<Programs />} />
           <Route path="/program/:id" element={<ProgramDetail />} />
           <Route path="/security" element={<Security />} />
+          <Route path="/invites" element={<MyInvites />} />
           <Route path="/work/:id" element={<WorkDetail />} />
           <Route path="/book" element={<Book />} />
           <Route path="/room/:id" element={<RoomDetail />} />

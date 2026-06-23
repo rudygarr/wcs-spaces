@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 29;
+export const SEED_VERSION = 31;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -767,6 +767,60 @@ function seedSecurity(): { guards: PersonRec[]; shifts: GuardShift[]; events: Ev
   return { guards, shifts, events };
 }
 
+// ---- Event invites demo ----
+// Two events that show both invite paths: a Faculty Staff Meeting TODAY (so the
+// day-of reminder has pending replies to nudge) with internal staff, and an AP
+// practice exam with a mix of internal students (accounts) and external students
+// invited by email only (no account — the "just email them a link" case).
+function seedInvites(people: PersonRec[]): { events: EventRec[]; invites: EventInvite[] } {
+  const id = (name: string) => people.find((p) => p.name === name)?.id;
+  const now = DEMO_TODAY.toISOString();
+  const events: EventRec[] = [
+    {
+      ...base, id: 'inv-staff', name: 'Faculty Staff Meeting', kind: 'booking', all_day: false,
+      starts_at: '2026-08-20T19:30:00-04:00', ends_at: '2026-08-20T20:30:00-04:00', // 3:30–4:30p EDT, today
+      location: 'TIDE Conference Room', owner: 'Vicki Kaplan', rooms: ['TIDE Conference Room'], resources: [],
+      source: 'internal', category: 'Staff', details: 'Back-to-school faculty meeting — agenda in the invite.',
+    },
+    {
+      ...base, id: 'inv-ap', name: 'AP Calculus — Practice Exam', kind: 'booking', all_day: false,
+      starts_at: '2026-09-12T08:30:00-04:00', ends_at: '2026-09-12T12:00:00-04:00', // 8:30a–12:00p EDT
+      location: 'Beacon Hall', owner: 'Rudy Garrido', rooms: ['Beacon Hall'], resources: ['Student Chairs'],
+      resourceQty: { 'Student Chairs': 60 }, source: 'internal', category: 'Academics', expectedAttendance: 48,
+      details: 'Full-length practice exam. Students RSVP to claim a seat — no account needed, just the email link.',
+    },
+  ];
+  // helper to build an invite row, internal if the name resolves to an account.
+  let n = 0;
+  const inv = (eventId: string, name: string, status: EventInvite['status'], opts: { email?: string; role?: string; external?: boolean; reminded?: boolean } = {}): EventInvite => {
+    const personId = opts.external ? undefined : id(name);
+    return {
+      id: `inv-row-${++n}`, eventId, personId, name,
+      email: opts.email, role: opts.role, status, invitedAt: now,
+      respondedAt: status === 'invited' ? undefined : now,
+      remindedAt: opts.reminded ? now : undefined,
+    };
+  };
+  const invites: EventInvite[] = [
+    // Staff meeting (today): most replied, two still pending → reminder demo.
+    inv('inv-staff', 'Lori Sakkab', 'accepted'),
+    inv('inv-staff', 'Adriana Marrero', 'accepted'),
+    inv('inv-staff', 'Grace Okafor', 'accepted'),
+    inv('inv-staff', 'Rudy Garrido', 'tentative'),
+    inv('inv-staff', 'Sherry Medder', 'invited'),
+    inv('inv-staff', 'Maya Delgado', 'invited'),
+    // AP practice exam: internal students with accounts + external (email-only).
+    inv('inv-ap', 'Eli Robinson', 'accepted', { role: 'Student' }),
+    inv('inv-ap', 'Sofia Marin', 'accepted', { role: 'Student' }),
+    inv('inv-ap', 'Noah Park', 'declined', { role: 'Student' }),
+    inv('inv-ap', 'Diego Ramos', 'invited', { role: 'Student' }),
+    inv('inv-ap', 'Ava Whitfield', 'accepted', { role: 'Student', external: true, email: 'awhitfield@demo.wcsmiami.org' }),
+    inv('inv-ap', 'Caleb Nguyen', 'invited', { role: 'Student', external: true, email: 'cnguyen@demo.wcsmiami.org' }),
+    inv('inv-ap', 'Maria Soto', 'tentative', { role: 'Student', external: true, email: 'msoto@demo.wcsmiami.org' }),
+  ];
+  return { events, invites };
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -805,11 +859,12 @@ export function buildSeed(): Database {
   const athletic: EventRec[] = (rawAthletic as WcsEvent[]).map((e, i) => ({ ...e, id: `ath-${i}` }));
   const rentalsSeed = seedRentals();
   const programsSeed = seedPrograms();
+  const invitesSeed = seedInvites(people);
   return {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events, ...security.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events, ...security.events, ...invitesSeed.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
@@ -828,6 +883,7 @@ export function buildSeed(): Database {
     blockouts: crew.blockouts,
     programs: programsSeed.programs,
     guardShifts: security.shifts,
+    invites: invitesSeed.invites,
     seedVersion: SEED_VERSION,
   };
 }

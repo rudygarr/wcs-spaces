@@ -118,6 +118,26 @@ export interface VisitorEntry {
   checkOutAt?: string; // "HH:MM" when they left (absent = still on campus)
 }
 
+// An invitation to attend an event (staff meeting, AP test, a bus assignment).
+// Two flavors: an internal person who has an account (personId set — they RSVP
+// in-app and get pinged on their channels) and an external guest with no account
+// (email only — they get an emailed RSVP link to a public accept/decline page,
+// no login). Either way the row tracks one person's reply.
+export type InviteStatus = 'invited' | 'accepted' | 'declined' | 'tentative';
+export interface EventInvite {
+  id: string;
+  eventId: string;
+  personId?: string; // internal invitee (has an account)
+  name: string; // display name, always present
+  email?: string; // external (no-account) invitee — the emailed-link path
+  role?: string; // optional label, e.g. "Proctor", "Camper", "Bus 1"
+  status: InviteStatus;
+  invitedAt: string;
+  respondedAt?: string;
+  remindedAt?: string; // when the day-of reminder fired
+  note?: string; // optional message from the organizer
+}
+
 // A thin umbrella over many child sessions, where each session is a real
 // WcsEvent carrying programId back up (services-module-spec §13). The parent
 // holds no rooms or times itself — the children do the real work and inherit the
@@ -396,7 +416,7 @@ export type NotifChannel = 'in-app' | 'email' | 'teams';
 export interface Notif {
   id: string;
   to: string; // person name this is for
-  kind: 'assigned' | 'crew' | 'done' | 'comment';
+  kind: 'assigned' | 'crew' | 'done' | 'comment' | 'invite';
   title: string;
   body?: string;
   link?: string; // hash route to open when tapped
@@ -542,6 +562,9 @@ export interface Database {
   // Multi-session "Program" containers (§13). Sessions live in `events` with a
   // programId; this array holds only the thin umbrellas.
   programs?: Program[];
+  // Event invitations (staff meetings, AP tests, bus rosters). Internal +
+  // external (no-account) guests; see lib/invites.
+  invites?: EventInvite[];
   // Security: scheduled guard shifts (security-visitor-scope). Visitor sign-ins
   // are deliberately NOT here — they live in session memory only, never on disk.
   guardShifts?: GuardShift[];
