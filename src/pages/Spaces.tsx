@@ -4,6 +4,7 @@ import { useStore, groupByFolder } from '../lib/store';
 import { roomHasConflict, resourceHasConflict } from '../lib/conflicts';
 import { CampusMap } from '../components/CampusMap';
 import { availableOn } from '../lib/stock';
+import { isVehicle, busPhoto } from '../lib/busPhoto';
 import { dayKey, DEMO_TODAY } from '../lib/data';
 import Modal, { field, primaryBtn } from '../components/Modal';
 import type { Resource } from '../lib/types';
@@ -50,14 +51,22 @@ function AddSpace({
   const [name, setName] = useState(editing?.name ?? '');
   const [folder, setFolder] = useState(editing?.folder ?? folders[0] ?? '');
   const [qty, setQty] = useState(editing?.qty != null ? String(editing.qty) : '');
+  const [photo, setPhoto] = useState<string>(editing?.photo ?? '');
   const [confirmDel, setConfirmDel] = useState(false);
   const label = kind === 'rooms' ? 'room' : 'resource';
   const isEdit = !!editing;
+  const showPhoto = kind === 'resources' && isVehicle(name);
+  function onPickPhoto(file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(String(reader.result));
+    reader.readAsDataURL(file);
+  }
   function submit() {
     if (!name.trim() || !folder.trim()) return;
     const n = parseInt(qty, 10);
     const q = Number.isFinite(n) && n > 0 ? n : undefined;
-    if (isEdit) updateResource(editing!.id, { name, folder: folder.trim(), qty: q ?? null });
+    if (isEdit) updateResource(editing!.id, { name, folder: folder.trim(), qty: q ?? null, photo: showPhoto ? photo || null : undefined });
     else if (kind === 'rooms') addRoom(name, folder.trim());
     else addResource(name, folder.trim(), q);
     onClose();
@@ -79,6 +88,28 @@ function AddSpace({
           <input style={field} type="number" min="1" inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 3 nurses, 200 chairs" />
           <div className="field-hint">
             Set a count to track availability and get over-booking warnings. Leave blank for an on-call service the team staffs as needed (e.g. an athletic trainer).
+          </div>
+        </>
+      )}
+      {showPhoto && (
+        <>
+          <label className="flabel">Vehicle photo</label>
+          <div className="veh-edit">
+            <img className="veh-edit-img" src={photo || busPhoto(name)} alt={name} />
+            <div className="veh-edit-actions">
+              <label className="btn-soft veh-upload">
+                <i className="ti ti-camera" /> Upload photo
+                <input type="file" accept="image/*" hidden onChange={(e) => onPickPhoto(e.target.files?.[0])} />
+              </label>
+              {photo && (
+                <button className="del-link" onClick={() => setPhoto('')}>
+                  Reset to drawn default
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="field-hint">
+            A real photo removes all doubt for drivers and coaches. Until you upload one, Steward draws a labeled stand-in.
           </div>
         </>
       )}
@@ -192,9 +223,13 @@ export default function Spaces() {
                         className="space-row"
                         onClick={() => (tab === 'rooms' ? nav('/room/' + item.id) : setEditing(item as Resource))}
                       >
-                        <span className="space-ico">
-                          <i className={'ti ' + (icons[f.name] || 'ti-point')} />
-                        </span>
+                        {res?.photo ? (
+                          <img className="space-thumb" src={res.photo} alt={res.name} />
+                        ) : (
+                          <span className="space-ico">
+                            <i className={'ti ' + (icons[f.name] || 'ti-point')} />
+                          </span>
+                        )}
                         <span className="nm" style={contested ? { color: 'var(--warn)' } : undefined}>
                           {contested && (
                             <i className="ti ti-alert-triangle" style={{ color: 'var(--warn)', fontSize: 14, marginRight: 5 }} />

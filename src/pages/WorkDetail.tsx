@@ -6,6 +6,7 @@ import { canDelegate, canWorkPool, inPool, deptTeam, assignedToMe } from '../lib
 import { IT_EMERGENCY_CONTACT } from '../data/it-problem-types';
 import { legCollision, driverBusyElsewhere } from '../lib/conflicts';
 import { driverLoad, suggestDriver, WEEKLY_SOFT_CAP } from '../lib/drivers';
+import { isVehicle, busPhoto } from '../lib/busPhoto';
 import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import AuditHistory from '../components/AuditHistory';
 import RequestThread from '../components/RequestThread';
@@ -67,6 +68,15 @@ function timeLabel(v?: string): string {
 
 // What a driver or a coach sees: the trip, laid out, nothing to edit.
 function ReadOnlyTrip({ w }: { w: WorkItem }) {
+  const { db } = useStore();
+  // Prefer a real uploaded photo on the vehicle resource; fall back to the
+  // drawn Warrior stand-in so the driver/coach always sees *which* bus.
+  const photoFor = (bus?: string): string | null => {
+    if (!bus) return null;
+    const r = db.resources.find((x) => x.name === bus);
+    if (r?.photo) return r.photo;
+    return isVehicle(bus) ? busPhoto(bus) : null;
+  };
   if (!w.trip) return null;
   return (
     <>
@@ -97,6 +107,7 @@ function ReadOnlyTrip({ w }: { w: WorkItem }) {
             <i className="ti ti-bus" />
             {leg.bus || 'Vehicle TBD'}
           </div>
+          {photoFor(leg.bus) && <img className="leg-bus-photo" src={photoFor(leg.bus)!} alt={leg.bus} />}
         </div>
       ))}
     </>
@@ -144,6 +155,13 @@ export default function WorkDetail() {
   const team = deptTeam(db.people, w.department);
   const drivers = db.drivers.filter((d) => d.active !== false);
   const buses = db.resources.filter((r) => r.folder === 'Transportation').map((r) => r.name);
+  // Photo for an assigned vehicle: uploaded resource photo, else the drawn stand-in.
+  const legBusPhoto = (bus?: string): string | null => {
+    if (!bus) return null;
+    const r = db.resources.find((x) => x.name === bus);
+    if (r?.photo) return r.photo;
+    return isVehicle(bus) ? busPhoto(bus) : null;
+  };
   // Equipment this department can hand to a job (IT devices, maintenance gear).
   const deptResources = db.resources.filter((r) => r.folder === w.department).map((r) => r.name);
 
@@ -439,6 +457,7 @@ export default function WorkDetail() {
                     </option>
                   ))}
                 </Sel>
+                {legBusPhoto(leg.bus) && <img className="leg-bus-photo" src={legBusPhoto(leg.bus)!} alt={leg.bus} />}
               </div>
 
               {hasConflict &&

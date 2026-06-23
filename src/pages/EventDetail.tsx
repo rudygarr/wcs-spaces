@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import type { SeriesScope } from '../lib/store';
 import { useSession } from '../lib/session';
-import { fmtTime, fmtDateLong, statusColor, findConflicts, DEMO_TODAY } from '../lib/data';
+import { fmtTime, fmtDateLong, statusColor, findConflicts, DEMO_TODAY, dayKey } from '../lib/data';
 import { checkinState, NOSHOW_GRACE_MIN } from '../lib/checkin';
 import { approvalSteps, derivedStatus, canApprove as canApproveEvent } from '../lib/approvals';
 import { conflictKey, isConflictResolved } from '../lib/conflicts';
@@ -18,7 +18,7 @@ import type { ApprovalRec, EventRec } from '../lib/types';
 export default function EventDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit, withdrawRequest, updateSeries, setSeriesCancelled } = useStore();
+  const { db, updateEvent, checkInEvent, releaseEvent, restoreEvent, logAudit, withdrawRequest, updateSeries, setSeriesCancelled, addWorkItem } = useStore();
   const [scope, setScope] = useState<SeriesScope>('all');
   const [moveTo, setMoveTo] = useState('');
   const { user } = useSession();
@@ -66,6 +66,49 @@ export default function EventDetail() {
   // can build/edit it. Everyone can read it.
   const canEditRun =
     isOverride || ev.owner === user.name || (ev.assignments?.some((a) => a.person === user.name) ?? false);
+
+  // Away-game transportation. An away game already implies a trip — rather than
+  // re-keying the destination and date into a separate work order, spawn the
+  // Transportation request straight from the calendar entry, pre-filled and
+  // linked back. (Never automatic: someone presses the button.)
+  const isAway = ev.homeAway === 'Away';
+  const linkedTrip = db.workItems.find((w) => w.eventId === ev.id && w.department === 'Transportation');
+  const canRequestTransport = isOverride || ev.owner === user.name;
+  function createTransportRequest() {
+    if (!ev || linkedTrip) return;
+    const dest = ev.opponent || ev.location || ev.name;
+    // Depart ~75 min before kickoff as a starting guess; dispatch refines.
+    let outTime = '';
+    if (ev.starts_at) {
+      const d = new Date(ev.starts_at);
+      d.setMinutes(d.getMinutes() - 75);
+      outTime = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    }
+    const base = `lg-${Date.now().toString(36)}`;
+    const tripLabel = ev.opponent ? `${ev.team ? ev.team + ' ' : ''}@ ${ev.opponent}` : ev.name;
+    const w = addWorkItem({
+      department: 'Transportation',
+      type: 'Away game trip',
+      title: `Transport — ${tripLabel}`,
+      requestedBy: user.name,
+      createdAt: DEMO_TODAY.toISOString(),
+      status: 'New',
+      priority: 'Normal',
+      location: ev.location || ev.opponent || '',
+      details: `Auto-created from the away-game calendar entry${typeof ev.expectedAttendance === 'number' ? ` · ~${ev.expectedAttendance} traveling` : ''}. Confirm bus, driver and times.`,
+      ...(ev.starts_at ? { scheduledFor: dayKey(new Date(ev.starts_at)) } : {}),
+      eventId: ev.id,
+      trip: {
+        destination: dest,
+        legs: [
+          { id: `${base}-o`, kind: 'Outbound', time: outTime },
+          { id: `${base}-r`, kind: 'Return', time: '' },
+        ],
+      },
+    });
+    logAudit({ action: 'Transportation requested', entityType: 'work', entityId: w.id, entityLabel: w.title, detail: `From away game · ${dest}`, link: `#/work/${w.id}` });
+    nav('/work/' + w.id);
+  }
 
   // Recurring-series management (item S4). When this booking is one occurrence of
   // a series, the owner/admin can move, cancel, or reinstate the run — scoped to
@@ -275,6 +318,39 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {isAway && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Transportation</span>
+          </div>
+          {linkedTrip ? (
+            <button className="trip-link-card" onClick={() => nav('/work/' + linkedTrip.id)}>
+              <span className="trip-link-ico">
+                <i className="ti ti-bus" />
+              </span>
+              <span className="trip-link-body">
+                <span className="trip-link-title">{linkedTrip.title}</span>
+                <span className="trip-link-sub">
+                  {linkedTrip.trip?.destination ? linkedTrip.trip.destination + ' · ' : ''}
+                  {linkedTrip.status}
+                </span>
+              </span>
+              <i className="ti ti-chevron-right chev" />
+            </button>
+          ) : canRequestTransport ? (
+            <button className="transport-cta" onClick={createTransportRequest}>
+              <i className="ti ti-bus" /> Create transportation request
+              <span className="transport-cta-sub">Pre-fills the trip to {ev.opponent || ev.location || 'the destination'} and routes it to dispatch</span>
+            </button>
+          ) : (
+            <div className="detail-meta" style={{ color: 'var(--text-3)' }}>
+              <i className="ti ti-bus" />
+              No transportation requested yet.
+            </div>
+          )}
+        </>
+      )}
 
       {ciState === 'open' && (
         <div className="ci-card ci-open">

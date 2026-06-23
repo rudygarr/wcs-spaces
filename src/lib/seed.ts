@@ -5,12 +5,13 @@ import rawAthletic from '../data/athletic-events.json';
 import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import { seedAssets } from '../data/assets';
+import { isVehicle, busPhoto } from './busPhoto';
 import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 25;
+export const SEED_VERSION = 26;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -522,6 +523,7 @@ export function buildSeed(): Database {
       name,
       folder: f.name,
       ...(RESOURCE_STOCK[name] !== undefined ? { qty: RESOURCE_STOCK[name] } : {}),
+      ...(isVehicle(name) ? { photo: busPhoto(name) } : {}),
     })),
   );
   const people: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({

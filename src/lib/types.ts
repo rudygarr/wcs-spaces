@@ -147,6 +147,10 @@ export interface Resource {
   // and are treated as not stock-tracked.
   qty?: number;
   unit?: string; // e.g. 'chairs', 'units' — for display only
+  // Optional photo (base64 data url or inline SVG data uri). Used for vehicles
+  // so drivers/crew get visual confirmation of the exact bus; uploadable per
+  // resource. Buses seed with a drawn Warrior stand-in until a real photo lands.
+  photo?: string;
 }
 
 export interface PersonRec extends Person {

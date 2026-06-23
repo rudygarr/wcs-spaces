@@ -58,7 +58,7 @@ interface StoreCtx {
   updateRoom: (id: string, patch: { name?: string; folder?: string; capacity?: number | null }) => void;
   removeRoom: (id: string) => void;
   addResource: (name: string, folder: string, qty?: number) => Resource;
-  updateResource: (id: string, patch: { name?: string; folder?: string; qty?: number | null }) => void;
+  updateResource: (id: string, patch: { name?: string; folder?: string; qty?: number | null; photo?: string | null }) => void;
   removeResource: (id: string) => void;
   addPerson: (p: Omit<PersonRec, 'id'>) => PersonRec;
   updatePerson: (id: string, patch: Partial<PersonRec>) => void;
@@ -215,6 +215,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (patch.qty !== undefined) {
             if (typeof patch.qty === 'number' && patch.qty > 0) next.qty = patch.qty;
             else delete next.qty;
+          }
+          // photo: a data url sets it, null clears it back to the default.
+          if (patch.photo !== undefined) {
+            if (patch.photo) next.photo = patch.photo;
+            else delete next.photo;
           }
           return next;
         }),
