@@ -29,6 +29,8 @@ import Search from './pages/Search';
 import Teams from './pages/Teams';
 import CrewTeamDetail from './pages/CrewTeamDetail';
 import MySchedule from './pages/MySchedule';
+import Programs from './pages/Programs';
+import ProgramDetail from './pages/ProgramDetail';
 import './App.css';
 
 function Gate() {
@@ -59,6 +61,8 @@ function Gate() {
           <Route path="/teams" element={<Teams />} />
           <Route path="/crew/:teamId" element={<CrewTeamDetail />} />
           <Route path="/my-schedule" element={<MySchedule />} />
+          <Route path="/programs" element={<Programs />} />
+          <Route path="/program/:id" element={<ProgramDetail />} />
           <Route path="/work/:id" element={<WorkDetail />} />
           <Route path="/book" element={<Book />} />
           <Route path="/room/:id" element={<RoomDetail />} />

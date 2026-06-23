@@ -14,6 +14,7 @@ import { rollTimes, fmtMin, fmtDur, totalRuntime, printRunSheet, CUE_META } from
 import AuditHistory from '../components/AuditHistory';
 import RequestThread from '../components/RequestThread';
 import CrewBoard from '../components/CrewBoard';
+import { programOf } from '../lib/programs';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
 export default function EventDetail() {
@@ -35,6 +36,9 @@ export default function EventDetail() {
       </div>
     );
   }
+
+  // If this booking is one session of a multi-session Program, surface the link up.
+  const parentProgram = programOf(db, ev);
 
   // Does this event clash with anything else in its rooms?
   const dayList = db.events.filter(
@@ -232,6 +236,13 @@ export default function EventDetail() {
       >
         {ev.name}
       </h1>
+
+      {parentProgram && (
+        <button className="prog-tag" onClick={() => nav('/program/' + parentProgram.id)}>
+          <i className="ti ti-layout-grid" /> Session of <strong>{parentProgram.name}</strong>
+          <i className="ti ti-chevron-right" style={{ marginLeft: 'auto' }} />
+        </button>
+      )}
 
       <div style={{ marginTop: 8 }}>
         <div className="detail-meta">

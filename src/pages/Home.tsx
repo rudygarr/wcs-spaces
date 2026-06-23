@@ -157,6 +157,7 @@ export default function Home() {
   const myApprovals = pendingForApprover(db, user.name).length;
   const myCrewRequests = pendingForPerson(db, user.id).length;
   const hasTeams = (db.crewTeams ?? []).length > 0;
+  const hasPrograms = (db.programs ?? []).length > 0;
   const canSeePM = user.site_admin || user.department === 'Maintenance';
   const pmDue = pmDueCount(db);
   // Check-in: my bookings happening now that still need confirmation.
@@ -425,6 +426,23 @@ export default function Home() {
           <span className="body">
             <span className="title">Teams</span>
             <span className="sub">Worship &amp; production crews — coverage and rosters</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {hasPrograms && (
+        <button
+          className="row"
+          onClick={() => nav('/programs')}
+          style={{ width: '100%', background: 'var(--surface)', border: '0.5px solid var(--border-2)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-layout-grid" />
+          </span>
+          <span className="body">
+            <span className="title">Programs</span>
+            <span className="sub">Multi-session events — festivals, conferences, rentals</span>
           </span>
           <i className="ti ti-chevron-right chev" />
         </button>

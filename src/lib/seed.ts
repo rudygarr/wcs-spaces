@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 27;
+export const SEED_VERSION = 28;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -663,6 +663,64 @@ function seedCrew(basePeople: PersonRec[]): CrewSeed {
   return { people, events, teams, positions, members, templates, assignments, blockouts };
 }
 
+// ---- Program container demo (services-module-spec §13) ----
+// One umbrella — a two-day Fine Arts Festival — over many real child sessions
+// across rooms and times. Seeded as a Draft so the demo can submit-once and
+// watch all sessions fan out to their room owners' queues at the same moment.
+// Sessions sit at status 'Draft' (not yet in any queue) until that submit.
+function seedPrograms(): { programs: Program[]; events: EventRec[] } {
+  const programs: Program[] = [
+    {
+      id: 'prog-arts',
+      name: 'Fine Arts Festival',
+      owner: 'Rudy Garrido',
+      startsDate: '2026-09-25',
+      endsDate: '2026-09-26',
+      status: 'Draft',
+      notes: 'Annual two-day showcase — recitals, masterclasses, gallery, and the grand finale concert.',
+    },
+  ];
+  const s = (
+    id: string,
+    name: string,
+    room: string,
+    starts: string,
+    ends: string,
+    extra: Partial<EventRec> = {},
+  ): EventRec => ({
+    ...base,
+    id,
+    name,
+    kind: 'booking',
+    all_day: false,
+    status: 'Draft',
+    percent_approved: 0,
+    starts_at: `2026-09-${starts}-04:00`,
+    ends_at: `2026-09-${ends}-04:00`,
+    location: room,
+    owner: 'Rudy Garrido',
+    details: 'Part of the Fine Arts Festival.',
+    rooms: [room],
+    resources: [],
+    source: 'internal',
+    category: 'Fine Arts',
+    programId: 'prog-arts',
+    ...extra,
+  });
+  const events: EventRec[] = [
+    // Day 1 — Friday Sep 25
+    s('prog-s1', 'Gallery Exhibit — Student Works', 'Art Gallery', '25T17:00:00', '25T20:00:00', { expectedAttendance: 120, resources: ['Podium'] }),
+    s('prog-s2', 'Opening Recital', 'Lighthouse Theater', '25T18:00:00', '25T19:30:00', { expectedAttendance: 300, resources: ['Microphone (hand-held)', 'Choral (Rolling) Risers'], resourceQty: { 'Microphone (hand-held)': 2 } }),
+    s('prog-s3', 'Jazz Combo Set', 'Beacon Hall', '25T19:00:00', '25T20:30:00', { expectedAttendance: 90 }),
+    // Day 2 — Saturday Sep 26
+    s('prog-s4', 'Masterclass: Strings', 'Rehearsal Studio (Orchestra Classroom)', '26T09:00:00', '26T11:00:00', { expectedAttendance: 40 }),
+    s('prog-s5', 'Choir Workshop', 'B 202 Choir Classroom', '26T09:30:00', '26T11:30:00', { expectedAttendance: 35, resources: ['Choir Mics'] }),
+    s('prog-s6', 'Theater Scenes Showcase', 'The Lighthouse Studio', '26T11:00:00', '26T12:30:00', { expectedAttendance: 80 }),
+    s('prog-s7', 'Grand Finale Concert', 'Lighthouse Theater', '26T14:00:00', '26T16:00:00', { expectedAttendance: 320, resources: ['Microphone (hand-held)', 'Microphone (headset)', 'Choral (Rolling) Risers'], resourceQty: { 'Microphone (hand-held)': 3 } }),
+  ];
+  return { programs, events };
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -699,11 +757,12 @@ export function buildSeed(): Database {
   // Athletics calendar — separate iCal feed (games, tournaments, dept events).
   const athletic: EventRec[] = (rawAthletic as WcsEvent[]).map((e, i) => ({ ...e, id: `ath-${i}` }));
   const rentalsSeed = seedRentals();
+  const programsSeed = seedPrograms();
   return {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
@@ -720,6 +779,7 @@ export function buildSeed(): Database {
     positionTemplates: crew.templates,
     crewAssignments: crew.assignments,
     blockouts: crew.blockouts,
+    programs: programsSeed.programs,
     seedVersion: SEED_VERSION,
   };
 }

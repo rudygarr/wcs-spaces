@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -101,6 +101,13 @@ interface StoreCtx {
   respondCrew: (assignmentId: string, accept: boolean) => void;
   addBlockout: (b: Omit<Blockout, 'id'>) => void;
   removeBlockout: (id: string) => void;
+  // Program containers (§13)
+  addProgram: (p: Omit<Program, 'id'>) => Program;
+  updateProgram: (id: string, patch: Partial<Program>) => void;
+  addProgramSession: (programId: string, e: Omit<EventRec, 'id'>) => EventRec;
+  detachSession: (eventId: string) => void;
+  submitProgram: (id: string) => void;
+  cancelProgram: (id: string, cancelled: boolean) => void;
   reset: () => void;
 }
 
@@ -673,6 +680,86 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     removeBlockout(id) {
       commit((d) => ({ ...d, blockouts: (d.blockouts ?? []).filter((b) => b.id !== id) }));
+    },
+    // ---- Program containers (§13) ----
+    // A new umbrella. Holds no rooms/times itself; sessions get added next and
+    // carry programId back up. Starts as a Draft so the owner can assemble the
+    // agenda before submitting the whole thing for approval at once.
+    addProgram(p) {
+      const prog: Program = { ...p, id: uid('prog') };
+      commit((d) => withAudit({ ...d, programs: [...(d.programs ?? []), prog] }, {
+        action: 'Created program', entityType: 'booking', entityId: prog.id, entityLabel: prog.name,
+        detail: prog.startsDate === prog.endsDate ? prog.startsDate : `${prog.startsDate} → ${prog.endsDate}`,
+        link: `#/program/${prog.id}`,
+      }));
+      return prog;
+    },
+    updateProgram(id, patch) {
+      commit((d) => ({ ...d, programs: (d.programs ?? []).map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+    },
+    // Add a session to a program: a real booking that carries programId. It
+    // conflict-checks, holds its room, and routes approval like any event. While
+    // the program is still a Draft the session sits as Pending but isn't in
+    // anyone's queue yet — submitProgram fans them all out together.
+    addProgramSession(programId, e) {
+      const ev: EventRec = { ...e, programId, id: uid('e') };
+      commit((d) => {
+        const prog = (d.programs ?? []).find((p) => p.id === programId);
+        const nd = { ...d, events: [...d.events, ev] };
+        return withAudit(nd, {
+          action: 'Added session', entityType: 'booking', entityId: ev.id, entityLabel: ev.name,
+          detail: prog ? prog.name : undefined, link: `#/event/${ev.id}`,
+        });
+      });
+      return ev;
+    },
+    // Pull a session out of its program (it stays a normal standalone booking).
+    detachSession(eventId) {
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        if (!ev) return d;
+        const nd = { ...d, events: d.events.map((e) => (e.id === eventId ? { ...e, programId: undefined } : e)) };
+        return withAudit(nd, { action: 'Removed session from program', entityType: 'booking', entityId: eventId, entityLabel: ev.name, link: `#/event/${eventId}` });
+      });
+    },
+    // Submit once → fan out (§13.6). Flips the program to Submitted; each session
+    // becomes a live Pending request so its room owner sees it in their queue.
+    // Approval still happens per room (reusing approvals.ts) — this just releases
+    // them all at the same moment instead of one booking at a time.
+    submitProgram(id) {
+      commit((d) => {
+        const prog = (d.programs ?? []).find((p) => p.id === id);
+        if (!prog) return d;
+        const nd = {
+          ...d,
+          programs: (d.programs ?? []).map((p) => (p.id === id ? { ...p, status: 'Submitted' as const } : p)),
+          events: d.events.map((e) => (e.programId === id && !e.cancelled ? { ...e, status: 'Pending', percent_approved: 0 } : e)),
+        };
+        const n = nd.events.filter((e) => e.programId === id && !e.cancelled).length;
+        return withAudit(nd, {
+          action: 'Submitted program for approval', entityType: 'booking', entityId: id, entityLabel: prog.name,
+          detail: `${n} session${n === 1 ? '' : 's'} fanned out`, link: `#/program/${id}`,
+        });
+      });
+    },
+    // Cancel cascade (§14.2-B): cancelling the program cancels every session
+    // (reversible — each frees its room/stock and leaves the queues but stays
+    // visible). Reinstating restores them all.
+    cancelProgram(id, cancelled) {
+      commit((d) => {
+        const prog = (d.programs ?? []).find((p) => p.id === id);
+        if (!prog) return d;
+        const nd = {
+          ...d,
+          programs: (d.programs ?? []).map((p) => (p.id === id ? { ...p, status: (cancelled ? 'Cancelled' : 'Submitted') as Program['status'] } : p)),
+          events: d.events.map((e) => (e.programId === id ? { ...e, cancelled } : e)),
+        };
+        const n = d.events.filter((e) => e.programId === id).length;
+        return withAudit(nd, {
+          action: `${cancelled ? 'Cancelled' : 'Reinstated'} program`, entityType: 'booking', entityId: id, entityLabel: prog.name,
+          detail: `${n} session${n === 1 ? '' : 's'}`, link: `#/program/${id}`,
+        });
+      });
     },
     reset() {
       void clearDB();

@@ -73,6 +73,28 @@ export interface WcsEvent {
   // durations, so editing one segment cascades the rest — how rundowns actually
   // work. Absent = no run sheet yet.
   runSheet?: RunSheet;
+  // Multi-session events (services-module-spec §13): a session points up to its
+  // Program (a conference day, a Sunday rental). The ONLY field a session adds —
+  // absent on 99% of bookings (the iron rule). The session is otherwise a full,
+  // normal booking that conflict-checks, holds its room, and routes approval on
+  // its own.
+  programId?: string;
+}
+
+// A thin umbrella over many child sessions, where each session is a real
+// WcsEvent carrying programId back up (services-module-spec §13). The parent
+// holds no rooms or times itself — the children do the real work and inherit the
+// entire toolbox (conflict, stock, check-in, run sheet, approval, audit) free.
+export interface Program {
+  id: string;
+  name: string;
+  owner: string;
+  startsDate: string; // dayKey "YYYY-MM-DD"
+  endsDate: string; // dayKey (inclusive); === startsDate for a one-day program
+  status: 'Draft' | 'Submitted' | 'Approved' | 'Cancelled';
+  seriesId?: string; // a recurring program (e.g. weekly Sunday service)
+  rentalId?: string; // when the program is also an external rental
+  notes?: string;
 }
 
 // A tech cue tied to a run-of-show segment — the discipline (audio/video/etc.)
@@ -480,6 +502,9 @@ export interface Database {
   positionTemplates?: PositionTemplate[];
   crewAssignments?: CrewAssignment[];
   blockouts?: Blockout[];
+  // Multi-session "Program" containers (§13). Sessions live in `events` with a
+  // programId; this array holds only the thin umbrellas.
+  programs?: Program[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;
