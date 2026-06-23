@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite, CampBus, Room,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite, CampBus, Room, CampCabin, CabinRoom,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 32;
+export const SEED_VERSION = 33;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -826,7 +826,7 @@ function seedInvites(people: PersonRec[]): { events: EventRec[]; invites: EventI
 // get assigned to one so they know which bus is theirs. Buses surface as rental
 // rooms; the roster is invites carrying a busId. GR8 Escape already exists as a
 // notice (n-0); Warrior Week is added here.
-function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[]; rooms: Room[]; invites: EventInvite[] } {
+function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[]; rooms: Room[]; invites: EventInvite[]; cabins: CampCabin[]; cabinRooms: CabinRoom[] } {
   const pid = (name: string) => people.find((p) => p.name === name)?.id;
   const now = DEMO_TODAY.toISOString();
 
@@ -836,14 +836,14 @@ function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[];
       starts_at: '2026-09-23T00:00:00-04:00', ends_at: '2026-09-25T00:00:00-04:00',
       location: 'Off campus — Lake Aurora Retreat', owner: 'High School Office', audience: 'High School',
       rooms: [], resources: ['Transportation'], category: 'Community',
-      details: 'Annual high-school overnight retreat. Buses are chartered — check your bus assignment below.',
+      details: 'Annual high-school overnight retreat. Buses are chartered and lodging is by cabin — check your bus and cabin below.',
     },
   ];
 
+  const rooms: Room[] = [];
   // bus + its matching rental room, generated together so ids line up.
   let bn = 0;
   const buses: CampBus[] = [];
-  const rooms: Room[] = [];
   const bus = (eventId: string, name: string, label: string, capacity: number, rentalOrg: string, departInfo: string) => {
     const id = `cb-${++bn}`;
     const roomId = `busroom-${bn}`;
@@ -856,27 +856,63 @@ function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[];
   const w1 = bus('camp-ww', 'Bus 1', 'Gold Squad', 30, 'Gold Coast Coach', 'Departs 8:00 AM · Gym Lot');
   const w2 = bus('camp-ww', 'Bus 2', 'Green Squad', 30, 'Gold Coast Coach', 'Departs 8:00 AM · Gym Lot');
 
+  // cabin (lodging) + its matching room in Spaces.
+  let cn = 0;
+  const cabins: CampCabin[] = [];
+  const cabinRooms: CabinRoom[] = [];
+  const cabin = (eventId: string, name: string, kind: CampCabin['kind'], beds?: number) => {
+    const id = `cab-${++cn}`;
+    const roomId = `cabinroom-${cn}`;
+    cabins.push({ id, eventId, roomId, name, kind, beds });
+    rooms.push({ id: roomId, name, folder: 'Camp cabins', isCabin: true, ...(beds ? { capacity: beds } : {}) });
+    return id;
+  };
+  let crn = 0;
+  const cabinRoom = (cabinId: string, name: string, beds: number) => {
+    const id = `cr-${++crn}`;
+    cabinRooms.push({ id, cabinId, name, beds });
+    return id;
+  };
+  // Pine Lodge is split into rooms (detailed mode); the rest use a simple bed count.
+  const pine = cabin('camp-ww', 'Pine Lodge', 'student');
+  const pineA = cabinRoom(pine, 'Room A', 8);
+  const pineB = cabinRoom(pine, 'Room B', 8);
+  const cedar = cabin('camp-ww', 'Cedar Lodge', 'student', 16);
+  const maple = cabin('camp-ww', 'Maple Hall', 'staff', 10);
+  const willow = cabin('camp-ww', 'Willow Cabin', 'parent', 6);
+  const birch = cabin('camp-ww', 'Birch Cottage', 'guest', 4);
+
   let rn = 0;
-  const camper = (eventId: string, busId: string, name: string, status: EventInvite['status'], email?: string): EventInvite => ({
+  type Opts = { email?: string; status?: EventInvite['status']; role?: string; cabinId?: string; cabinRoomId?: string; cabinLeader?: boolean };
+  const person = (eventId: string, busId: string | undefined, name: string, o: Opts = {}): EventInvite => ({
     id: `camp-inv-${++rn}`, eventId, busId, name,
-    personId: email ? undefined : pid(name), email,
-    role: 'Camper', status, invitedAt: now, respondedAt: status === 'invited' ? undefined : now,
+    personId: o.email ? undefined : pid(name), email: o.email,
+    role: o.role ?? 'Camper', cabinId: o.cabinId, cabinRoomId: o.cabinRoomId, cabinLeader: o.cabinLeader,
+    status: o.status ?? 'accepted', invitedAt: now, respondedAt: (o.status ?? 'accepted') === 'invited' ? undefined : now,
   });
   const invites: EventInvite[] = [
     // GR8 Escape — a couple internal students, the rest external (no account).
-    camper('n-0', g1, 'Eli Robinson', 'accepted'),
-    camper('n-0', g1, 'Jordan Blake', 'accepted', 'jblake@demo.wcsmiami.org'),
-    camper('n-0', g1, 'Mia Torres', 'accepted', 'mtorres@demo.wcsmiami.org'),
-    camper('n-0', g2, 'Sofia Marin', 'accepted'),
-    camper('n-0', g2, 'Liam Carter', 'invited', 'lcarter@demo.wcsmiami.org'),
-    camper('n-0', g2, 'Zoe Bennett', 'accepted', 'zbennett@demo.wcsmiami.org'),
-    // Warrior Week — HS students.
-    camper('camp-ww', w1, 'Ava Whitfield', 'accepted', 'awhitfield@demo.wcsmiami.org'),
-    camper('camp-ww', w1, 'Noah Park', 'accepted'),
-    camper('camp-ww', w2, 'Maria Soto', 'accepted', 'msoto@demo.wcsmiami.org'),
-    camper('camp-ww', w2, 'Caleb Nguyen', 'invited', 'cnguyen2@demo.wcsmiami.org'),
+    person('n-0', g1, 'Eli Robinson'),
+    person('n-0', g1, 'Jordan Blake', { email: 'jblake@demo.wcsmiami.org' }),
+    person('n-0', g1, 'Mia Torres', { email: 'mtorres@demo.wcsmiami.org' }),
+    person('n-0', g2, 'Sofia Marin'),
+    person('n-0', g2, 'Liam Carter', { status: 'invited', email: 'lcarter@demo.wcsmiami.org' }),
+    person('n-0', g2, 'Zoe Bennett', { email: 'zbennett@demo.wcsmiami.org' }),
+    // Warrior Week — students, housed in cabins.
+    person('camp-ww', w1, 'Ava Whitfield', { email: 'awhitfield@demo.wcsmiami.org', cabinId: pine, cabinRoomId: pineA }),
+    person('camp-ww', w1, 'Noah Park', { cabinId: pine, cabinRoomId: pineA }),
+    person('camp-ww', w2, 'Maria Soto', { email: 'msoto@demo.wcsmiami.org', cabinId: cedar }),
+    person('camp-ww', w2, 'Caleb Nguyen', { status: 'invited', email: 'cnguyen2@demo.wcsmiami.org', cabinId: cedar }),
+    // Cabin leaders — adults in charge of a cabin / room within it.
+    person('camp-ww', w1, 'Coach Dan Rivera', { role: 'Cabin Leader', email: 'drivera@demo.wcsmiami.org', cabinId: pine, cabinRoomId: pineA, cabinLeader: true }),
+    person('camp-ww', w1, 'Ms. Tara Hill', { role: 'Cabin Leader', email: 'thill@demo.wcsmiami.org', cabinId: pine, cabinRoomId: pineB, cabinLeader: true }),
+    person('camp-ww', w2, 'Mr. Alan Pierce', { role: 'Cabin Leader', email: 'apierce@demo.wcsmiami.org', cabinId: cedar, cabinLeader: true }),
+    // Staff, a parent volunteer, and a guest speaker — other cabin kinds.
+    person('camp-ww', undefined, 'Rudy Garrido', { role: 'Staff', cabinId: maple }),
+    person('camp-ww', undefined, 'Mrs. Elena Gomez', { role: 'Parent volunteer', email: 'egomez@demo.wcsmiami.org', cabinId: willow }),
+    person('camp-ww', undefined, 'Pastor Mike Allen', { role: 'Guest speaker', email: 'mallen@demo.wcsmiami.org', cabinId: birch }),
   ];
-  return { events, buses, rooms, invites };
+  return { events, buses, rooms, invites, cabins, cabinRooms };
 }
 
 // Builds the initial in-memory database from the harvested seed data.
@@ -944,6 +980,8 @@ export function buildSeed(): Database {
     guardShifts: security.shifts,
     invites: [...invitesSeed.invites, ...campsSeed.invites],
     campBuses: campsSeed.buses,
+    campCabins: campsSeed.cabins,
+    cabinRooms: campsSeed.cabinRooms,
     seedVersion: SEED_VERSION,
   };
 }

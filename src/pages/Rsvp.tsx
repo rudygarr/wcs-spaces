@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { fmtDateLong, fmtTime } from '../lib/data';
-import { busOfInvite, busLabel } from '../lib/camps';
+import { busOfInvite, busLabel, cabinOfInvite, roomOfInvite } from '../lib/camps';
 import helmetMark from '../assets/brand/warrior-helmet.png';
 import type { InviteStatus } from '../lib/types';
 
@@ -41,6 +41,9 @@ export default function Rsvp() {
             </div>
             {(() => { const bus = busOfInvite(db, invite); return bus ? (
               <div className="rsvp-bus"><i className="ti ti-bus" /> Your bus: <strong>{busLabel(bus)}</strong>{bus.departInfo ? <span> · {bus.departInfo}</span> : null}</div>
+            ) : null; })()}
+            {(() => { const cabin = cabinOfInvite(db, invite); const room = roomOfInvite(db, invite); return cabin ? (
+              <div className="rsvp-bus"><i className="ti ti-home" /> Your cabin: <strong>{cabin.name}{room ? ` · ${room.name}` : ''}</strong>{invite.cabinLeader ? <span> · you're a leader</span> : null}</div>
             ) : null; })()}
             {ev.details && <div className="rsvp-details">{ev.details}</div>}
 

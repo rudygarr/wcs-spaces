@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtDateLong, fmtTime } from '../lib/data';
 import { myInvites } from '../lib/invites';
-import { busOfInvite, busLabel } from '../lib/camps';
+import { busOfInvite, busLabel, cabinOfInvite, roomOfInvite } from '../lib/camps';
 import type { InviteStatus } from '../lib/types';
 
 const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
@@ -25,6 +25,8 @@ export default function MyInvites() {
     const ev = db.events.find((e) => e.id === eventId);
     const i = mine.find((x) => x.id === invId)!;
     const bus = busOfInvite(db, i);
+    const cabin = cabinOfInvite(db, i);
+    const room = roomOfInvite(db, i);
     return (
       <div key={invId} className="inv-card">
         <button className="inv-card-main" onClick={() => ev && nav('/event/' + ev.id)}>
@@ -34,6 +36,7 @@ export default function MyInvites() {
             {ev?.location ? ` · ${ev.location}` : ''}
           </span>
           {bus && <span className="inv-card-bus"><i className="ti ti-bus" /> Your bus: <strong>{busLabel(bus)}</strong>{bus.departInfo ? ` · ${bus.departInfo}` : ''}</span>}
+          {cabin && <span className="inv-card-bus"><i className="ti ti-home" /> Your cabin: <strong>{cabin.name}{room ? ` · ${room.name}` : ''}</strong>{i.cabinLeader ? ' · leader' : ''}</span>}
           {i.note && <span className="inv-card-note">“{i.note}”</span>}
         </button>
         <div className="inv-rsvp">
@@ -66,12 +69,15 @@ export default function MyInvites() {
           {replied.map((i) => {
             const ev = db.events.find((e) => e.id === i.eventId);
             const bus = busOfInvite(db, i);
+            const cabin = cabinOfInvite(db, i);
+            const room = roomOfInvite(db, i);
             return (
               <div key={i.id} className="inv-card replied">
                 <button className="inv-card-main" onClick={() => nav('/event/' + i.eventId)}>
                   <span className="inv-card-title">{ev?.name ?? 'Event'}</span>
                   <span className="inv-card-sub">{ev?.starts_at ? `${fmtDateLong(new Date(ev.starts_at))} · ${fmtTime(ev.starts_at)}` : ''}</span>
                   {bus && <span className="inv-card-bus"><i className="ti ti-bus" /> Your bus: <strong>{busLabel(bus)}</strong>{bus.departInfo ? ` · ${bus.departInfo}` : ''}</span>}
+                  {cabin && <span className="inv-card-bus"><i className="ti ti-home" /> Your cabin: <strong>{cabin.name}{room ? ` · ${room.name}` : ''}</strong>{i.cabinLeader ? ' · leader' : ''}</span>}
                 </button>
                 <span className={'inv-chip ' + STATUS[i.status].cls}>{STATUS[i.status].label}</span>
               </div>

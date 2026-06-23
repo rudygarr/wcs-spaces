@@ -132,11 +132,34 @@ export interface EventInvite {
   email?: string; // external (no-account) invitee — the emailed-link path
   role?: string; // optional label, e.g. "Proctor", "Camper", "Bus 1"
   busId?: string; // camp roster: which CampBus this camper is assigned to
+  cabinId?: string; // camp lodging: which CampCabin they sleep in
+  cabinRoomId?: string; // which room within the cabin (when the cabin has rooms)
+  cabinLeader?: boolean; // a leader in charge of that cabin / room (vs an occupant)
   status: InviteStatus;
   invitedAt: string;
   respondedAt?: string;
   remindedAt?: string; // when the day-of reminder fired
   note?: string; // optional message from the organizer
+}
+
+// Lodging for a camp: a cabin with a kind (who stays there) and either a simple
+// total bed count OR rooms-within (CabinRoom), each with its own beds. Surfaced
+// as a room like buses. Occupants are EventInvites carrying this cabinId.
+export type CabinKind = 'student' | 'staff' | 'parent' | 'guest';
+export interface CampCabin {
+  id: string;
+  eventId: string;
+  roomId?: string; // the matching Room created for it
+  name: string; // "Pine Lodge"
+  kind: CabinKind;
+  beds?: number; // simple mode: total beds (used when the cabin has no rooms)
+}
+// A room within a cabin (detailed mode), with its own bed count.
+export interface CabinRoom {
+  id: string;
+  cabinId: string;
+  name: string; // "Room A", "Bunk 1"
+  beds: number;
 }
 
 // A chartered bus for a sleep-away camp (Warrior Week, GR8 Escape). It's a
@@ -235,6 +258,7 @@ export interface Room {
   // it as a chartered bus, NOT the school's own fleet — created ad-hoc per camp.
   isBus?: boolean;
   rental?: boolean;
+  isCabin?: boolean; // camp lodging surfaced as a room
 }
 
 export interface Resource {
@@ -596,6 +620,9 @@ export interface Database {
   invites?: EventInvite[];
   // Chartered camp buses (rental) surfaced as rooms; see lib/camps.
   campBuses?: CampBus[];
+  // Camp lodging: cabins and the rooms within them; see lib/camps.
+  campCabins?: CampCabin[];
+  cabinRooms?: CabinRoom[];
   // Security: scheduled guard shifts (security-visitor-scope). Visitor sign-ins
   // are deliberately NOT here — they live in session memory only, never on disk.
   guardShifts?: GuardShift[];

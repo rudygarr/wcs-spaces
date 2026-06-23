@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus, CampBus } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus, CampBus, CampCabin, CabinRoom, CabinKind } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -109,7 +109,7 @@ interface StoreCtx {
   submitProgram: (id: string) => void;
   cancelProgram: (id: string, cancelled: boolean) => void;
   // Event invites
-  inviteToEvent: (eventId: string, who: { personId?: string; name: string; email?: string; role?: string; note?: string; busId?: string }) => void;
+  inviteToEvent: (eventId: string, who: { personId?: string; name: string; email?: string; role?: string; note?: string; busId?: string; cabinId?: string; cabinRoomId?: string; cabinLeader?: boolean }) => void;
   respondInvite: (inviteId: string, status: InviteStatus) => void;
   removeInvite: (inviteId: string) => void;
   remindInvite: (inviteId: string) => void;
@@ -118,6 +118,13 @@ interface StoreCtx {
   addCampBus: (eventId: string, bus: { name: string; label?: string; capacity?: number; rentalOrg?: string; departInfo?: string }) => void;
   removeCampBus: (busId: string) => void;
   assignToBus: (inviteId: string, busId: string | undefined) => void;
+  // Camp cabins (lodging)
+  addCampCabin: (eventId: string, cabin: { name: string; kind: CabinKind; beds?: number }) => void;
+  removeCampCabin: (cabinId: string) => void;
+  addCabinRoom: (cabinId: string, room: { name: string; beds: number }) => void;
+  removeCabinRoom: (roomId: string) => void;
+  assignToCabin: (inviteId: string, cabinId: string | undefined, cabinRoomId?: string) => void;
+  setCabinLeader: (inviteId: string, leader: boolean) => void;
   reset: () => void;
 }
 
@@ -780,6 +787,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const invite: EventInvite = {
         id: uid('inv'), eventId, personId: who.personId, name: who.name,
         email: who.email, role: who.role, note: who.note, busId: who.busId,
+        cabinId: who.cabinId, cabinRoomId: who.cabinRoomId, cabinLeader: who.cabinLeader,
         status: 'invited', invitedAt: DEMO_TODAY.toISOString(),
       };
       commit((d) => {
@@ -936,6 +944,69 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       commit((d) => ({
         ...d,
         invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, busId } : i)),
+      }));
+    },
+    // ---- Camp cabins (lodging) ----
+    // A cabin is event lodging surfaced as a room (folder "Camp cabins"). Simple
+    // mode carries a bed count; detailed mode adds rooms-within (see addCabinRoom).
+    addCampCabin(eventId, cabin) {
+      const roomId = uid('cabinroom');
+      const cb: CampCabin = { id: uid('cabin'), eventId, roomId, name: cabin.name.trim(), kind: cabin.kind, beds: cabin.beds };
+      const room: Room = {
+        id: roomId, name: cb.name, folder: 'Camp cabins', isCabin: true,
+        ...(cabin.beds ? { capacity: cabin.beds } : {}),
+      };
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        return withAudit({ ...d, campCabins: [...(d.campCabins ?? []), cb], rooms: [...d.rooms, room] }, {
+          action: 'Added cabin', entityType: 'booking', entityId: eventId, entityLabel: ev?.name ?? 'Camp',
+          detail: `${cb.name} · ${cb.kind}`, link: `#/event/${eventId}`,
+        });
+      });
+    },
+    removeCampCabin(cabinId) {
+      commit((d) => {
+        const cabin = (d.campCabins ?? []).find((c) => c.id === cabinId);
+        const roomIds = new Set((d.cabinRooms ?? []).filter((r) => r.cabinId === cabinId).map((r) => r.id));
+        return {
+          ...d,
+          campCabins: (d.campCabins ?? []).filter((c) => c.id !== cabinId),
+          cabinRooms: (d.cabinRooms ?? []).filter((r) => r.cabinId !== cabinId),
+          rooms: d.rooms.filter((r) => r.id !== cabin?.roomId),
+          // Clear anyone who was housed there.
+          invites: (d.invites ?? []).map((i) =>
+            i.cabinId === cabinId || (i.cabinRoomId && roomIds.has(i.cabinRoomId))
+              ? { ...i, cabinId: undefined, cabinRoomId: undefined, cabinLeader: undefined }
+              : i,
+          ),
+        };
+      });
+    },
+    addCabinRoom(cabinId, room) {
+      const cr: CabinRoom = { id: uid('croom'), cabinId, name: room.name.trim(), beds: room.beds };
+      commit((d) => ({ ...d, cabinRooms: [...(d.cabinRooms ?? []), cr] }));
+    },
+    removeCabinRoom(roomId) {
+      commit((d) => ({
+        ...d,
+        cabinRooms: (d.cabinRooms ?? []).filter((r) => r.id !== roomId),
+        invites: (d.invites ?? []).map((i) => (i.cabinRoomId === roomId ? { ...i, cabinRoomId: undefined } : i)),
+      }));
+    },
+    // House someone in a cabin (and optionally a room within). Pass undefined to
+    // move them out.
+    assignToCabin(inviteId, cabinId, cabinRoomId) {
+      commit((d) => ({
+        ...d,
+        invites: (d.invites ?? []).map((i) =>
+          i.id === inviteId ? { ...i, cabinId, cabinRoomId: cabinId ? cabinRoomId : undefined } : i,
+        ),
+      }));
+    },
+    setCabinLeader(inviteId, leader) {
+      commit((d) => ({
+        ...d,
+        invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, cabinLeader: leader } : i)),
       }));
     },
     reset() {

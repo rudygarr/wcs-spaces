@@ -16,6 +16,7 @@ import RequestThread from '../components/RequestThread';
 import CrewBoard from '../components/CrewBoard';
 import InvitePanel from '../components/InvitePanel';
 import CampBusPanel from '../components/CampBusPanel';
+import CabinPanel from '../components/CabinPanel';
 import { programOf } from '../lib/programs';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
@@ -532,6 +533,10 @@ export default function EventDetail() {
 
       <div style={{ marginTop: 14 }}>
         <CampBusPanel ev={ev} />
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <CabinPanel ev={ev} />
       </div>
 
       <div style={{ marginTop: 14 }}>

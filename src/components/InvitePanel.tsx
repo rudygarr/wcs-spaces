@@ -4,7 +4,7 @@ import { useSession } from '../lib/session';
 import { initials } from '../lib/session';
 import { dayKey, DEMO_TODAY } from '../lib/data';
 import { invitesFor, rsvpLabel } from '../lib/invites';
-import { busesFor } from '../lib/camps';
+import { busesFor, cabinsFor } from '../lib/camps';
 import type { EventRec, InviteStatus } from '../lib/types';
 import Modal, { field, primaryBtn } from './Modal';
 
@@ -20,9 +20,9 @@ export default function InvitePanel({ ev }: { ev: EventRec }) {
   const { user } = useSession();
   const [showInvite, setShowInvite] = useState(false);
 
-  // Camp roster invites (busId set) are managed in the bus panel — exclude them
-  // here so we don't list every camper twice.
-  const invites = invitesFor(db, ev.id).filter((i) => !i.busId);
+  // Camp roster invites (on a bus or in a cabin) are managed in the bus/cabin
+  // panels — exclude them here so we don't list every camper twice.
+  const invites = invitesFor(db, ev.id).filter((i) => !i.busId && !i.cabinId);
   const summary = {
     total: invites.length,
     accepted: invites.filter((i) => i.status === 'accepted').length,
@@ -33,11 +33,11 @@ export default function InvitePanel({ ev }: { ev: EventRec }) {
   const canManage = user.site_admin || user.resolves_conflicts || ev.owner === user.name;
   const isToday = ev.starts_at ? dayKey(new Date(ev.starts_at)) === dayKey(DEMO_TODAY) : false;
   const dueNow = invites.filter((i) => i.status === 'invited' && !i.remindedAt).length;
-  const isCampWithBuses = busesFor(db, ev.id).length > 0;
+  const isCamp = busesFor(db, ev.id).length > 0 || cabinsFor(db, ev.id).length > 0;
 
   // Zero-footprint: hide if there's nothing to show and either you can't manage
-  // or this is a camp (where invites live in the bus panel instead).
-  if (invites.length === 0 && (!canManage || isCampWithBuses)) return null;
+  // or this is a camp (where attendees live in the bus/cabin panels instead).
+  if (invites.length === 0 && (!canManage || isCamp)) return null;
 
   return (
     <div className="inv-panel">
