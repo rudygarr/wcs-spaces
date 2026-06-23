@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { useSession } from '../lib/session';
 import { fmtDateLong, fmtTime } from '../lib/data';
 import { myInvites } from '../lib/invites';
-import { busOfInvite, busLabel, cabinOfInvite, roomOfInvite } from '../lib/camps';
+import { busOfInvite, busLabel, cabinOfInvite, roomOfInvite, dutiesForPerson, shiftWindow } from '../lib/camps';
 import type { InviteStatus } from '../lib/types';
 
 const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
@@ -20,6 +20,9 @@ export default function MyInvites() {
   const mine = myInvites(db, user.id);
   const pending = mine.filter((i) => i.status === 'invited');
   const replied = mine.filter((i) => i.status !== 'invited');
+  const duties = dutiesForPerson(db, user.id);
+  const roleName = (id: string) => db.campRoles?.find((r) => r.id === id)?.name ?? 'Role';
+  const shiftOf = (id?: string) => (id ? db.campShifts?.find((s) => s.id === id) : undefined);
 
   function row(invId: string, eventId: string) {
     const ev = db.events.find((e) => e.id === eventId);
@@ -80,6 +83,27 @@ export default function MyInvites() {
                   {cabin && <span className="inv-card-bus"><i className="ti ti-home" /> Your cabin: <strong>{cabin.name}{room ? ` · ${room.name}` : ''}</strong>{i.cabinLeader ? ' · leader' : ''}</span>}
                 </button>
                 <span className={'inv-chip ' + STATUS[i.status].cls}>{STATUS[i.status].label}</span>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {duties.length > 0 && (
+        <>
+          <div className="section-label" style={{ marginTop: 22 }}>
+            <span className="lbl">Your camp jobs</span>
+            <span className="act">{duties.length}</span>
+          </div>
+          {duties.map((d) => {
+            const ev = db.events.find((e) => e.id === d.eventId);
+            const s = shiftOf(d.shiftId);
+            return (
+              <div key={d.id} className="inv-card replied">
+                <button className="inv-card-main" onClick={() => nav('/event/' + d.eventId)}>
+                  <span className="inv-card-title">{roleName(d.roleId)}{s && <span className="inv-role">{s.name}</span>}</span>
+                  <span className="inv-card-sub">{ev?.name ?? 'Camp'}{s && shiftWindow(s) ? ` · ${shiftWindow(s)}` : ''}</span>
+                </button>
               </div>
             );
           })}

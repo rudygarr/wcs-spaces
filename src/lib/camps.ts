@@ -1,4 +1,4 @@
-import type { Database, CampBus, CampCabin, CabinRoom, CabinKind, EventInvite } from './types';
+import type { Database, CampBus, CampCabin, CabinRoom, CabinKind, EventInvite, CampRole, CampShift, CampDuty } from './types';
 
 // Buses chartered for a camp event (Warrior Week, GR8 Escape). Sorted by name.
 export function busesFor(db: Database, eventId: string): CampBus[] {
@@ -86,4 +86,33 @@ export function roomOfInvite(db: Database, invite: EventInvite): CabinRoom | und
 // Camp attendees not yet given a bed (for the "assign" picker / warnings).
 export function unhousedAttendees(db: Database, eventId: string): EventInvite[] {
   return (db.invites ?? []).filter((i) => i.eventId === eventId && !i.cabinId);
+}
+
+// ---- Roles & shifts (adult jobs) ----
+export function rolesFor(db: Database, eventId: string): CampRole[] {
+  return (db.campRoles ?? []).filter((r) => r.eventId === eventId);
+}
+export function shiftsOfRole(db: Database, roleId: string): CampShift[] {
+  return (db.campShifts ?? []).filter((s) => s.roleId === roleId);
+}
+export function roleHasShifts(db: Database, roleId: string): boolean {
+  return shiftsOfRole(db, roleId).length > 0;
+}
+export function dutiesOfRole(db: Database, roleId: string): CampDuty[] {
+  return (db.campDuties ?? []).filter((d) => d.roleId === roleId);
+}
+export function dutiesOfShift(db: Database, shiftId: string): CampDuty[] {
+  return (db.campDuties ?? []).filter((d) => d.shiftId === shiftId);
+}
+// Duties on a role not tied to a shift (the role's general assignees).
+export function unscheduledDuties(db: Database, roleId: string): CampDuty[] {
+  return (db.campDuties ?? []).filter((d) => d.roleId === roleId && !d.shiftId);
+}
+export function shiftWindow(s: CampShift): string {
+  if (s.start && s.end) return `${s.start}–${s.end}`;
+  return s.start || '';
+}
+// An adult's duties at a camp (for "your camp jobs" on their side).
+export function dutiesForPerson(db: Database, personId: string): CampDuty[] {
+  return (db.campDuties ?? []).filter((d) => d.personId === personId);
 }

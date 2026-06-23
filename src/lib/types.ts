@@ -177,6 +177,35 @@ export interface CampBus {
   departInfo?: string; // "Departs 7:30 AM · Main Lot"
 }
 
+// A camp job for the adults — Production, Bus Monitor, Kitchen, Security, Nurse,
+// Snack Station, Lifeguard, etc. A role may be split into shifts (windows) when
+// it needs coverage across the day; a role with no shifts is staffed straight.
+export interface CampRole {
+  id: string;
+  eventId: string;
+  name: string;
+  icon?: string; // tabler icon
+  blurb?: string;
+}
+export interface CampShift {
+  id: string;
+  roleId: string;
+  name: string; // "Breakfast", "Departure", "Overnight"
+  start?: string; // "HH:MM" (optional)
+  end?: string;
+}
+// One adult assigned to a role (and optionally a specific shift). A person can
+// hold several duties, so this is its own record rather than a field on a person.
+export interface CampDuty {
+  id: string;
+  eventId: string;
+  roleId: string;
+  shiftId?: string;
+  personId?: string; // internal, if they have an account
+  name: string;
+  email?: string; // external helper, no account
+}
+
 // A thin umbrella over many child sessions, where each session is a real
 // WcsEvent carrying programId back up (services-module-spec §13). The parent
 // holds no rooms or times itself — the children do the real work and inherit the
@@ -623,6 +652,10 @@ export interface Database {
   // Camp lodging: cabins and the rooms within them; see lib/camps.
   campCabins?: CampCabin[];
   cabinRooms?: CabinRoom[];
+  // Camp roles (adult jobs), their optional shifts, and who's assigned.
+  campRoles?: CampRole[];
+  campShifts?: CampShift[];
+  campDuties?: CampDuty[];
   // Security: scheduled guard shifts (security-visitor-scope). Visitor sign-ins
   // are deliberately NOT here — they live in session memory only, never on disk.
   guardShifts?: GuardShift[];

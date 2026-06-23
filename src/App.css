@@ -3347,3 +3347,25 @@
 .cab-leadtoggle { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-1); cursor: pointer; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); border: 0.5px solid var(--border-2); }
 .cab-leadtoggle input { width: 17px; height: 17px; accent-color: var(--green); }
 .cab-leadtoggle .ti { color: var(--gold, #c3945d); }
+
+/* ---- Camp roles & shifts ---- */
+.rp { border: 0.5px solid var(--border-2); border-radius: var(--r-lg); background: var(--surface); padding: 14px 16px; }
+.rp-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.rp-card { border: 0.5px solid var(--border-2); border-radius: var(--r-md); padding: 12px; background: var(--surface-2); }
+.rp-card-head { display: flex; align-items: center; gap: 10px; }
+.rp-ic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--green-tint); color: var(--green); font-size: 18px; flex-shrink: 0; }
+.rp-name { flex: 1; font-size: 15px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+.rp-count { font-size: 12px; font-weight: 400; color: var(--text-3); }
+.rp-blurb { font-size: 12.5px; color: var(--text-3); margin-top: 6px; }
+.rp-shifts { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.rp-shift { border: 0.5px dashed var(--border-2); border-radius: var(--r-sm); padding: 9px 10px; background: var(--surface); }
+.rp-shift-h { display: flex; align-items: center; gap: 8px; }
+.rp-shift-name { flex: 1; font-size: 13.5px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+.rp-shift-time { font-size: 12px; font-weight: 400; color: var(--text-3); }
+.rp-iconpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.rp-iconbtn { width: 40px; height: 40px; display: grid; place-items: center; border: 0.5px solid var(--border-2); border-radius: var(--r-sm); background: var(--surface-2); color: var(--text-2); cursor: pointer; font-size: 19px; }
+.rp-iconbtn.on { border-color: var(--green); background: var(--green-tint); color: var(--green); }
+
+/* "Your camp jobs" on My invitations */
+.inv-card-duty { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.inv-card-duty .ti { font-size: 15px; color: var(--green); }

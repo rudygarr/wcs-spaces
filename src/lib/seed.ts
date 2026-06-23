@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite, CampBus, Room, CampCabin, CabinRoom,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift, EventInvite, CampBus, Room, CampCabin, CabinRoom, CampRole, CampShift, CampDuty,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 33;
+export const SEED_VERSION = 34;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -826,7 +826,7 @@ function seedInvites(people: PersonRec[]): { events: EventRec[]; invites: EventI
 // get assigned to one so they know which bus is theirs. Buses surface as rental
 // rooms; the roster is invites carrying a busId. GR8 Escape already exists as a
 // notice (n-0); Warrior Week is added here.
-function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[]; rooms: Room[]; invites: EventInvite[]; cabins: CampCabin[]; cabinRooms: CabinRoom[] } {
+function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[]; rooms: Room[]; invites: EventInvite[]; cabins: CampCabin[]; cabinRooms: CabinRoom[]; roles: CampRole[]; shifts: CampShift[]; duties: CampDuty[] } {
   const pid = (name: string) => people.find((p) => p.name === name)?.id;
   const now = DEMO_TODAY.toISOString();
 
@@ -912,7 +912,60 @@ function seedCamps(people: PersonRec[]): { events: EventRec[]; buses: CampBus[];
     person('camp-ww', undefined, 'Mrs. Elena Gomez', { role: 'Parent volunteer', email: 'egomez@demo.wcsmiami.org', cabinId: willow }),
     person('camp-ww', undefined, 'Pastor Mike Allen', { role: 'Guest speaker', email: 'mallen@demo.wcsmiami.org', cabinId: birch }),
   ];
-  return { events, buses, rooms, invites, cabins, cabinRooms };
+
+  // ---- Camp roles & shifts (adult jobs) ----
+  let roln = 0, shn = 0, dn = 0;
+  const roles: CampRole[] = [];
+  const shifts: CampShift[] = [];
+  const duties: CampDuty[] = [];
+  const role = (name: string, icon: string, blurb?: string) => {
+    const id = `crole-${++roln}`;
+    roles.push({ id, eventId: 'camp-ww', name, icon, blurb });
+    return id;
+  };
+  const shift = (roleId: string, name: string, start?: string, end?: string) => {
+    const id = `cshift-${++shn}`;
+    shifts.push({ id, roleId, name, start, end });
+    return id;
+  };
+  const duty = (roleId: string, name: string, opts: { email?: string; shiftId?: string } = {}) => {
+    duties.push({ id: `cduty-${++dn}`, eventId: 'camp-ww', roleId, shiftId: opts.shiftId, personId: opts.email ? undefined : pid(name), name, email: opts.email });
+  };
+
+  // Straight roles (no shifts).
+  const prod = role('Production', 'ti-broadcast', 'Sound, slides, and stage for the evening sessions.');
+  duty(prod, 'Rudy Garrido');
+  duty(prod, 'Mason Reed', { email: 'mreed@demo.wcsmiami.org' });
+  const nurse = role('Nurse', 'ti-heartbeat', 'On-call for the whole camp.');
+  duty(nurse, 'Karen Phillips', { email: 'kphillips@demo.wcsmiami.org' });
+  const snack = role('Snack Station', 'ti-cookie', 'Afternoon and evening snacks.');
+  duty(snack, 'Mrs. Elena Gomez', { email: 'egomez@demo.wcsmiami.org' });
+
+  // Bus monitors — shifted by departure / return.
+  const monitor = role('Bus Monitor', 'ti-bus', 'Ride along and account for every student.');
+  const mDepart = shift(monitor, 'Departure (Wed AM)', '07:30', '10:00');
+  const mReturn = shift(monitor, 'Return (Fri PM)', '14:00', '16:30');
+  duty(monitor, 'Coach Dan Rivera', { email: 'drivera@demo.wcsmiami.org', shiftId: mDepart });
+  duty(monitor, 'Ms. Tara Hill', { email: 'thill@demo.wcsmiami.org', shiftId: mDepart });
+  duty(monitor, 'Coach Dan Rivera', { email: 'drivera@demo.wcsmiami.org', shiftId: mReturn });
+  // mReturn left one short on purpose — coverage gap to fill in the demo.
+
+  // Kitchen — shifted by meal.
+  const kitchen = role('Kitchen Helper', 'ti-tools', 'Serve and clean up at meal times.');
+  const kB = shift(kitchen, 'Breakfast', '06:30', '08:30');
+  const kL = shift(kitchen, 'Lunch', '11:30', '13:30');
+  const kD = shift(kitchen, 'Dinner', '17:00', '19:00');
+  duty(kitchen, 'Mr. Alan Pierce', { email: 'apierce@demo.wcsmiami.org', shiftId: kB });
+  duty(kitchen, 'Mrs. Elena Gomez', { email: 'egomez@demo.wcsmiami.org', shiftId: kL });
+  duty(kitchen, 'Mr. Alan Pierce', { email: 'apierce@demo.wcsmiami.org', shiftId: kD });
+
+  // Lifeguard — shifted by free-time block.
+  const guard = role('Lifeguard', 'ti-swimming', 'Required whenever the lake is open.');
+  const gAM = shift(guard, 'Free time — morning', '10:30', '12:00');
+  const gPM = shift(guard, 'Free time — afternoon', '15:00', '17:00');
+  duty(guard, 'Coach Dan Rivera', { email: 'drivera@demo.wcsmiami.org', shiftId: gAM });
+
+  return { events, buses, rooms, invites, cabins, cabinRooms, roles, shifts, duties };
 }
 
 // Builds the initial in-memory database from the harvested seed data.
@@ -982,6 +1035,9 @@ export function buildSeed(): Database {
     campBuses: campsSeed.buses,
     campCabins: campsSeed.cabins,
     cabinRooms: campsSeed.cabinRooms,
+    campRoles: campsSeed.roles,
+    campShifts: campsSeed.shifts,
+    campDuties: campsSeed.duties,
     seedVersion: SEED_VERSION,
   };
 }

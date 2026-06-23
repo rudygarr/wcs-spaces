@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus, CampBus, CampCabin, CabinRoom, CabinKind } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout, Program, EventInvite, InviteStatus, CampBus, CampCabin, CabinRoom, CabinKind, CampRole, CampShift, CampDuty } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -125,6 +125,13 @@ interface StoreCtx {
   removeCabinRoom: (roomId: string) => void;
   assignToCabin: (inviteId: string, cabinId: string | undefined, cabinRoomId?: string) => void;
   setCabinLeader: (inviteId: string, leader: boolean) => void;
+  // Camp roles & shifts
+  addCampRole: (eventId: string, role: { name: string; icon?: string; blurb?: string }) => void;
+  removeCampRole: (roleId: string) => void;
+  addCampShift: (roleId: string, shift: { name: string; start?: string; end?: string }) => void;
+  removeCampShift: (shiftId: string) => void;
+  assignDuty: (eventId: string, roleId: string, who: { personId?: string; name: string; email?: string; shiftId?: string }) => void;
+  removeDuty: (dutyId: string) => void;
   reset: () => void;
 }
 
@@ -1008,6 +1015,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...d,
         invites: (d.invites ?? []).map((i) => (i.id === inviteId ? { ...i, cabinLeader: leader } : i)),
       }));
+    },
+    // ---- Camp roles & shifts ----
+    addCampRole(eventId, role) {
+      const r: CampRole = { id: uid('crole'), eventId, name: role.name.trim(), icon: role.icon, blurb: role.blurb?.trim() || undefined };
+      commit((d) => {
+        const ev = d.events.find((e) => e.id === eventId);
+        return withAudit({ ...d, campRoles: [...(d.campRoles ?? []), r] }, {
+          action: 'Added camp role', entityType: 'booking', entityId: eventId, entityLabel: ev?.name ?? 'Camp',
+          detail: r.name, link: `#/event/${eventId}`,
+        });
+      });
+    },
+    removeCampRole(roleId) {
+      commit((d) => {
+        const shiftIds = new Set((d.campShifts ?? []).filter((s) => s.roleId === roleId).map((s) => s.id));
+        return {
+          ...d,
+          campRoles: (d.campRoles ?? []).filter((r) => r.id !== roleId),
+          campShifts: (d.campShifts ?? []).filter((s) => s.roleId !== roleId),
+          campDuties: (d.campDuties ?? []).filter((du) => du.roleId !== roleId && !(du.shiftId && shiftIds.has(du.shiftId))),
+        };
+      });
+    },
+    addCampShift(roleId, shift) {
+      const s: CampShift = { id: uid('cshift'), roleId, name: shift.name.trim(), start: shift.start, end: shift.end };
+      commit((d) => ({ ...d, campShifts: [...(d.campShifts ?? []), s] }));
+    },
+    removeCampShift(shiftId) {
+      commit((d) => ({
+        ...d,
+        campShifts: (d.campShifts ?? []).filter((s) => s.id !== shiftId),
+        campDuties: (d.campDuties ?? []).filter((du) => du.shiftId !== shiftId),
+      }));
+    },
+    // Put an adult on a role (and optionally a shift).
+    assignDuty(eventId, roleId, who) {
+      const duty: CampDuty = { id: uid('cduty'), eventId, roleId, shiftId: who.shiftId, personId: who.personId, name: who.name.trim(), email: who.email };
+      commit((d) => ({ ...d, campDuties: [...(d.campDuties ?? []), duty] }));
+    },
+    removeDuty(dutyId) {
+      commit((d) => ({ ...d, campDuties: (d.campDuties ?? []).filter((du) => du.id !== dutyId) }));
     },
     reset() {
       void clearDB();
