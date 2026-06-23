@@ -9,13 +9,13 @@ import { isVehicle, busPhoto } from './busPhoto';
 import { DEMO_TODAY } from './data';
 import type {
   Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
-  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout, Program, GuardShift,
 } from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 28;
+export const SEED_VERSION = 29;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -721,6 +721,52 @@ function seedPrograms(): { programs: Program[]; events: EventRec[] } {
   return { programs, events };
 }
 
+// ---- Security & visitor demo (security-visitor-scope) ----
+// Guards as people-resources on the Security calendar, a couple of pre-
+// registered visitor heads-ups, and an after-hours booking that auto-flags
+// "needs Security + Custodial." Everything is dated to DEMO_TODAY (Thu Aug 20)
+// so the gate's day view is live on open. Visitor sign-ins are NOT seeded —
+// those only ever exist in session memory (see lib/visitorLog).
+function seedSecurity(): { guards: PersonRec[]; shifts: GuardShift[]; events: EventRec[] } {
+  // Synthetic guards (public repo → @demo addresses, invented names).
+  const guards: PersonRec[] = [
+    { id: 'sg-0', name: 'Marcus Bell', email: 'mbell@demo.wcsmiami.org', event: '', rooms: '', resources: '', people: '', resolves_conflicts: false, site_admin: false },
+    { id: 'sg-1', name: 'Tanya Cruz', email: 'tcruz@demo.wcsmiami.org', event: '', rooms: '', resources: '', people: '', resolves_conflicts: false, site_admin: false },
+  ];
+  // Thursday window is 6:30a–6:00p. Two posted shifts leave an 11:00a–1:00p
+  // lunch gap on purpose, so the coverage view has something to flag.
+  const day = '2026-08-20';
+  const shifts: GuardShift[] = [
+    { id: 'gs-1', personId: 'sg-0', date: day, start: '06:30', end: '11:00', post: 'Main Gate' },
+    { id: 'gs-2', personId: 'sg-1', date: day, start: '13:00', end: '18:00', post: 'Carline / Roving patrol' },
+  ];
+  const events: EventRec[] = [
+    {
+      ...base, id: 'sec-tour', name: 'Admissions Tour — Prospective Family', kind: 'booking', all_day: false,
+      starts_at: `${day}T09:30:00-04:00`, ends_at: `${day}T10:30:00-04:00`,
+      location: 'MS Conference Room', owner: 'Vicki Kaplan', rooms: ['MS Conference Room'], resources: [],
+      source: 'internal', category: 'Admissions', details: 'Campus tour for a prospective MS family.',
+      expectedVisitors: { count: 3, contact: 'The Morales family', purpose: 'Campus tour', time: '09:30' },
+    },
+    {
+      ...base, id: 'sec-vendor', name: 'Vendor Walkthrough — AV Upgrade', kind: 'booking', all_day: false,
+      starts_at: `${day}T14:00:00-04:00`, ends_at: `${day}T15:00:00-04:00`,
+      location: 'Lighthouse Theater', owner: 'Rudy Garrido', rooms: ['Lighthouse Theater'], resources: [],
+      source: 'internal', category: 'Facilities', details: 'Site survey for the theater AV refresh.',
+      expectedVisitors: { count: 2, contact: 'Pro AV Systems (2 techs)', purpose: 'Site survey', time: '14:00' },
+    },
+    {
+      ...base, id: 'sec-booster', name: 'Booster Club Evening Meeting', kind: 'booking', all_day: false,
+      starts_at: `${day}T18:30:00-04:00`, ends_at: `${day}T20:00:00-04:00`,
+      location: 'Beacon Hall', owner: 'Sheryl Medder', rooms: ['Beacon Hall'], resources: ['Chairs'],
+      resourceQty: { 'Chairs': 40 }, source: 'internal', category: 'Community', expectedAttendance: 35,
+      details: 'After-hours — runs past the 6:00p close, so the gate needs a guard + custodian on site.',
+      expectedVisitors: { count: 30, contact: 'Booster Club members', purpose: 'Monthly meeting', time: '18:30' },
+    },
+  ];
+  return { guards, shifts, events };
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -747,7 +793,8 @@ export function buildSeed(): Database {
     ...(deptStaff[p.name] ?? {}),
   }));
   const crew = seedCrew(basePeople);
-  const people = [...basePeople, ...crew.people];
+  const security = seedSecurity();
+  const people = [...basePeople, ...crew.people, ...security.guards];
   // Internal bookings harvested from Planning Center, plus the public master
   // calendar pulled from the school's iCal feed.
   const internal: EventRec[] = (rawEvents as WcsEvent[])
@@ -762,7 +809,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events, ...programsSeed.events, ...security.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
@@ -780,6 +827,7 @@ export function buildSeed(): Database {
     crewAssignments: crew.assignments,
     blockouts: crew.blockouts,
     programs: programsSeed.programs,
+    guardShifts: security.shifts,
     seedVersion: SEED_VERSION,
   };
 }

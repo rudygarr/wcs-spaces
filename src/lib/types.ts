@@ -73,12 +73,49 @@ export interface WcsEvent {
   // durations, so editing one segment cascades the rest — how rundowns actually
   // work. Absent = no run sheet yet.
   runSheet?: RunSheet;
+  // Pre-registered visitors (security-visitor-scope): a heads-up for the gate so
+  // guards expect named guests instead of cold walk-ups. The count/contact/time
+  // are logistics, not identities — actual visitor names are only ever captured
+  // live at the door (see VisitorEntry) and never persisted.
+  expectedVisitors?: { count: number; contact?: string; purpose?: string; time?: string };
   // Multi-session events (services-module-spec §13): a session points up to its
   // Program (a conference day, a Sunday rental). The ONLY field a session adds —
   // absent on 99% of bookings (the iron rule). The session is otherwise a full,
   // normal booking that conflict-checks, holds its room, and routes approval on
   // its own.
   programId?: string;
+}
+
+// A scheduled guard shift (security-visitor-scope): a person posted to a gate
+// or patrol for a window. "Everything is a resource with a calendar" — guards
+// are people-resources on the Security calendar; the coverage view reads these
+// against the School-Open hours to surface gaps.
+export interface GuardShift {
+  id: string;
+  personId: string;
+  date: string; // dayKey "YYYY-MM-DD"
+  start: string; // "HH:MM" 24h
+  end: string; // "HH:MM"
+  post: string; // e.g. "Main Gate", "Carline", "Roving patrol"
+}
+
+// A live visitor sign-in at the gate. PRIVACY: this is the one record that
+// holds a real person's name, so it is NEVER written to the persisted database
+// or localStorage — it lives only in session memory (see lib/visitorLog) and
+// clears on reload. The shape is defined here for type-safety only; it is
+// intentionally absent from Database.
+export interface VisitorEntry {
+  id: string;
+  names: string; // visitor name(s) as typed
+  date: string; // dayKey
+  time: string; // "HH:MM" arrival
+  campus: string; // PS/ES, MS, HS, CCC, Office, Other
+  reason: string;
+  overseerName?: string; // personnel overseeing (a staff member)
+  badge?: string; // visitor pass / badge number
+  eventId?: string; // the booking that brought them, if any
+  loggedBy: string; // the signed-in guard
+  checkOutAt?: string; // "HH:MM" when they left (absent = still on campus)
 }
 
 // A thin umbrella over many child sessions, where each session is a real
@@ -505,6 +542,9 @@ export interface Database {
   // Multi-session "Program" containers (§13). Sessions live in `events` with a
   // programId; this array holds only the thin umbrellas.
   programs?: Program[];
+  // Security: scheduled guard shifts (security-visitor-scope). Visitor sign-ins
+  // are deliberately NOT here — they live in session memory only, never on disk.
+  guardShifts?: GuardShift[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;

@@ -448,6 +448,21 @@ export default function Home() {
         </button>
       )}
 
+      <button
+        className="row"
+        onClick={() => nav('/security')}
+        style={{ width: '100%', background: 'var(--surface)', border: '0.5px solid var(--border-2)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+      >
+        <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+          <i className="ti ti-shield-half" />
+        </span>
+        <span className="body">
+          <span className="title">Security &amp; visitors</span>
+          <span className="sub">Gate coverage, expected guests, after-hours flags, visitor log</span>
+        </span>
+        <i className="ti ti-chevron-right chev" />
+      </button>
+
       {myOpenReqs > 0 && (
         <button
           className="row"
