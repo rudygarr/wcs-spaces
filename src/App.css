@@ -3280,3 +3280,43 @@
 .inv-card-bus .ti { font-size: 15px; }
 .rsvp-bus { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 11px 13px; border-radius: var(--r-md); background: var(--green-tint); color: var(--green); font-size: 14px; }
 .rsvp-bus .ti { font-size: 18px; }
+
+/* ---- Dashboard: shortcuts grid + customizer ---- */
+.sc-wrap { margin-bottom: 24px; }
+.sc-edit { font-size: 13px; color: var(--green); background: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.sc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.sc-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  padding: 14px 6px; border-radius: var(--r-md); cursor: pointer;
+  background: var(--surface); border: 0.5px solid var(--border-2); color: var(--text-1);
+  font-size: 12px; font-weight: 500; text-align: center; min-height: 78px;
+}
+.sc-tile:hover { border-color: color-mix(in srgb, var(--green) 40%, transparent); background: var(--green-tint); }
+.sc-tile .ti { font-size: 22px; color: var(--green); }
+.sc-tile span { line-height: 1.2; }
+.sc-empty { width: 100%; padding: 18px; border-radius: var(--r-md); border: 1px dashed var(--border-2); background: none; color: var(--text-3); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+@media (max-width: 420px) { .sc-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.dc-label { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
+.dc-label span { font-weight: 400; color: var(--text-3); }
+.dc-pinned { display: flex; flex-direction: column; gap: 6px; }
+.dc-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0.5px solid var(--border-2); border-radius: var(--r-sm); background: var(--surface-2); }
+.dc-row-ic { color: var(--green); font-size: 18px; }
+.dc-row-name { flex: 1; font-size: 14px; }
+.dc-arrows { display: flex; gap: 3px; }
+.dc-arrows button { width: 28px; height: 26px; display: grid; place-items: center; border: 0.5px solid var(--border-2); border-radius: 7px; background: var(--surface); color: var(--text-2); cursor: pointer; }
+.dc-arrows button:disabled { opacity: 0.3; cursor: default; }
+.dc-remove { width: 28px; height: 26px; display: grid; place-items: center; border: none; background: none; color: var(--text-3); cursor: pointer; }
+.dc-remove:hover { color: var(--bad); }
+.dc-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.dc-add-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 7px 12px; border-radius: 999px; border: 0.5px solid var(--border-2); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+.dc-add-chip:hover { border-color: var(--green); color: var(--green); }
+.dc-add-chip .ti { color: var(--green); }
+.dc-sections { display: flex; flex-direction: column; gap: 8px; }
+.dc-toggle { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: var(--r-sm); border: 0.5px solid var(--border-2); background: var(--surface-2); color: var(--text-2); cursor: pointer; font-size: 14px; }
+.dc-toggle.on { color: var(--text-1); }
+.dc-toggle .ti { font-size: 18px; }
+.dc-toggle.on .ti { color: var(--green); }
+.dc-toggle span:first-of-type { flex: 1; text-align: left; }
+.dc-toggle-state { font-size: 12px; font-weight: 600; color: var(--text-3); }
+.dc-toggle.on .dc-toggle-state { color: var(--green); }

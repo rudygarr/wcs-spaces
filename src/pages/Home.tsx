@@ -14,6 +14,9 @@ import { checkinState } from '../lib/checkin';
 import { rentalFollowups, uncollectedTotal, money } from '../lib/rentals';
 import { pendingForPerson } from '../lib/crew';
 import { pendingInviteCount } from '../lib/invites';
+import { isSectionHidden } from '../lib/dashboard';
+import Shortcuts from '../components/Shortcuts';
+import DashboardCustomizer from '../components/DashboardCustomizer';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -144,6 +147,11 @@ export default function Home() {
   const { user } = useSession();
   const { db, checkInEvent } = useStore();
   const [view, setView] = useState<'mine' | 'school'>('mine');
+  const [showCustomize, setShowCustomize] = useState(false);
+  // Read the live person so saved dashboard prefs are reflected (the session
+  // user is a static snapshot).
+  const me = db.people.find((p) => p.id === user.id) ?? user;
+  const prefs = me.dashboard;
   const today = eventsOnDay(db.events, DEMO_TODAY);
   const mine = today.filter((e) => isMine(e, user.name));
   const shown = view === 'mine' ? mine : today;
@@ -191,6 +199,8 @@ export default function Home() {
             : `${today.length} events today · ${pendingCount} approvals waiting`}
         </div>
       </div>
+
+      <Shortcuts prefs={prefs} onCustomize={() => setShowCustomize(true)} />
 
       {/* Role-aware lead: department staff open straight onto their pool. */}
       {user.department && <PoolHero dept={user.department} user={user} />}
@@ -270,6 +280,7 @@ export default function Home() {
         ))}
       </div>
 
+      {!isSectionHidden(prefs, 'today') && <>
       <div className="section-label">
         <span className="lbl">Today on campus</span>
         <span className="act" onClick={() => nav('/calendar')} style={{ cursor: 'pointer' }}>
@@ -324,6 +335,7 @@ export default function Home() {
           );
         })}
       </div>
+      </>}
 
       {myTasks > 0 && (
         <button
@@ -499,6 +511,7 @@ export default function Home() {
         </button>
       )}
 
+      {!isSectionHidden(prefs, 'queues') && <>
       <div className="section-label">
         <span className="lbl">Work queues</span>
         <span className="act" onClick={() => nav('/queue')} style={{ cursor: 'pointer' }}>
@@ -522,8 +535,9 @@ export default function Home() {
           </div>
         ))}
       </div>
+      </>}
 
-      <div className="widgets" style={{ marginBottom: 24 }}>
+      {!isSectionHidden(prefs, 'stats') && <div className="widgets" style={{ marginBottom: 24 }}>
         <button className="widget" onClick={() => nav('/calendar')}>
           <div className="widget-top">
             <span>Needs you</span>
@@ -555,7 +569,7 @@ export default function Home() {
             <div className="widget-sub">2 guards on duty</div>
           </div>
         )}
-      </div>
+      </div>}
 
       <div className="statstrip">
         <span>
@@ -571,6 +585,8 @@ export default function Home() {
           <b>{db.events.length}</b> events
         </span>
       </div>
+
+      {showCustomize && <DashboardCustomizer prefs={prefs} onClose={() => setShowCustomize(false)} />}
     </>
   );
 }

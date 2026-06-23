@@ -264,6 +264,15 @@ export interface PersonRec extends Person {
   deptRole?: 'Lead' | 'Tech';
   // How this person wants to be pinged (see NotifyPrefs). Absent = all channels on.
   notifyPrefs?: NotifyPrefs;
+  // Home dashboard customization — pinned shortcut tiles + hidden sections.
+  // Absent = defaults (see lib/dashboard).
+  dashboard?: DashboardPrefs;
+}
+
+// Per-user Home dashboard prefs (see lib/dashboard for the catalog + helpers).
+export interface DashboardPrefs {
+  shortcuts?: string[]; // ordered shortcut keys the user pinned
+  hiddenSections?: string[]; // section keys the user hid
 }
 
 export interface EventRec extends WcsEvent {
