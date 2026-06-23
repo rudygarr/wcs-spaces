@@ -25,7 +25,7 @@ export default function Calendar() {
   const { db, addCalendarView, removeCalendarView } = useStore();
   const { user } = useSession();
   const [day, setDay] = useState<Date>(DEMO_TODAY);
-  const [view, setView] = useState<'mine' | 'school'>('school');
+  const [view, setView] = useState<'mine' | 'following' | 'school'>('school');
   const [folders, setFolders] = useState<string[]>([]); // room folders to include; [] = all
   const [hideNotices, setHideNotices] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -34,10 +34,18 @@ export default function Calendar() {
   const roomFolder = new Map(db.rooms.map((r) => [r.name, r.folder]));
   const allFolders = [...new Set(db.rooms.map((r) => r.folder))].sort();
 
+  // People this user follows (ids → names). An event "involves" a followed
+  // person when they own it or are assigned to it — that's the overlay.
+  const followedIds = new Set(user.following ?? []);
+  const followedNames = new Set(db.people.filter((p) => followedIds.has(p.id)).map((p) => p.name));
+  const involvesFollowed = (e: EventRec) =>
+    (!!e.owner && followedNames.has(e.owner)) || (e.assignments?.some((a) => followedNames.has(a.person)) ?? false);
+
   // One predicate drives both the day list and the export, so what you see is
   // what you get out.
   const matchesFilters = (e: EventRec) => {
     if (view === 'mine' && !isMine(e, user.name)) return false;
+    if (view === 'following' && !involvesFollowed(e)) return false;
     if (e.kind === 'notice') return !hideNotices; // FYI entries are toggled, not folder-filtered
     if (folders.length === 0) return true;
     return e.rooms.some((r) => {
@@ -159,10 +167,21 @@ export default function Calendar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: showFilters ? 10 : 14 }}>
         <div className="seg seg-sm" style={{ flex: 1 }}>
           <button className={view === 'mine' ? 'active' : ''} onClick={() => setView('mine')}>
-            Your events
+            Yours
           </button>
+          {followedNames.size > 0 && (
+            <button
+              className={view === 'following' ? 'active' : ''}
+              onClick={() => setView('following')}
+              title="People you follow"
+              aria-label="People you follow"
+              style={{ flex: '0 0 auto', paddingLeft: 14, paddingRight: 14 }}
+            >
+              <i className="ti ti-star-filled" style={{ fontSize: 14, color: view === 'following' ? undefined : 'var(--gold)' }} />
+            </button>
+          )}
           <button className={view === 'school' ? 'active' : ''} onClick={() => setView('school')}>
-            School events
+            School
           </button>
         </div>
         <button
@@ -242,9 +261,14 @@ export default function Calendar() {
             Nothing of yours this day — see school events →
           </button>
         )}
-        {list.length === 0 && (view === 'school' || filterCount > 0) && (
+        {list.length === 0 && view === 'following' && (
+          <button className="empty" style={{ width: '100%', background: 'none', border: 'none' }} onClick={() => setView('school')}>
+            No one you follow has events this day — see school events →
+          </button>
+        )}
+        {list.length === 0 && view === 'school' && (
           <button className="empty" style={{ width: '100%', background: 'none', border: 'none', cursor: filterCount ? 'pointer' : 'default' }} onClick={() => filterCount && clearFilters()}>
-            {filterCount > 0 || view === 'mine' ? 'Nothing matches this view — tap to clear filters' : 'Nothing scheduled this day.'}
+            {filterCount > 0 ? 'Nothing matches this view — tap to clear filters' : 'Nothing scheduled this day.'}
           </button>
         )}
         {list.map((e, i) => {
@@ -289,6 +313,9 @@ export default function Calendar() {
                     )}
                     {!conflicted && ci === 'noshow' && (
                       <i className="ti ti-user-x" style={{ fontSize: 14, marginRight: 4, color: 'var(--warn)' }} />
+                    )}
+                    {view !== 'following' && !cancelled && involvesFollowed(e) && (
+                      <i className="ti ti-star-filled" style={{ fontSize: 13, marginRight: 4, color: 'var(--gold)' }} title="Someone you follow" />
                     )}
                     {e.name}
                   </span>

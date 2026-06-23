@@ -305,7 +305,7 @@ export interface CalendarView {
   name: string;
   owner: string; // creator; '' for seeded/shared views
   shared?: boolean;
-  scope: 'mine' | 'school';
+  scope: 'mine' | 'following' | 'school';
   folders: string[]; // room folders to include; [] = all spaces
   hideNotices: boolean; // drop FYI/notice entries
 }
