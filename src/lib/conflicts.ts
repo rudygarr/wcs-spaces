@@ -1,5 +1,5 @@
 import type { Database, EventRec, TripLeg, WorkItem } from './types';
-import { findConflicts, eventsOnDay, occupancyWindow, DEMO_TODAY } from './data';
+import { findConflicts, occupancyWindow, DEMO_TODAY } from './data';
 
 // One place every surface asks "is this in conflict?" — so the warning on the
 // dashboard, the calendar, the queue, and a trip all agree. Conflicts are
@@ -77,8 +77,11 @@ export function tripHasActiveConflict(db: Database, w: WorkItem): boolean {
 // ---- Events: same room, overlapping time ----
 export function eventInConflict(db: Database, e: EventRec): boolean {
   if (!e.starts_at || e.all_day) return false;
-  const dayEvents = eventsOnDay(db.events, new Date(e.starts_at));
-  return findConflicts(dayEvents).some(
+  // Run the SAME global pass the dashboard uses — never a day-bucketed subset.
+  // A booking that runs past midnight clashes with one filed under the next
+  // day; bucketing by start day would silently drop that pair here while the
+  // dashboard still flags it. One source of truth keeps every surface agreeing.
+  return findConflicts(db.events).some(
     (c) => (c.a.id === e.id || c.b.id === e.id) && !isConflictResolved(db, conflictKey(c.a.id, c.b.id)),
   );
 }

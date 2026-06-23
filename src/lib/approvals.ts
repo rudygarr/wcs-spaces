@@ -36,21 +36,24 @@ export interface ApprovalStep {
 }
 
 // Who must sign off on this event, one step per distinct approver, with each
-// approver's current decision. Empty if the event books no rooms.
+// approver's current decision. Empty only when there's nothing to gate.
 export function approvalSteps(db: Database, e: EventRec): ApprovalStep[] {
   const byApprover = new Map<string, ApprovalStep>();
+  const add = (approver: string, area: string) => {
+    if (byApprover.has(approver)) return;
+    const decided = e.approvals?.find((a) => a.approver === approver);
+    byApprover.set(approver, { approver, area, status: decided?.status ?? 'Pending', at: decided?.at });
+  };
   for (const room of e.rooms) {
     const folder = folderOfRoom(db, room);
-    if (!folder) continue;
-    const approver = folderApprover(folder);
-    if (byApprover.has(approver)) continue;
-    const decided = e.approvals?.find((a) => a.approver === approver);
-    byApprover.set(approver, {
-      approver,
-      area: folder,
-      status: decided?.status ?? 'Pending',
-      at: decided?.at,
-    });
+    if (folder) add(folderApprover(folder), folder);
+  }
+  // Resource-only request (no room, e.g. "deliver the AV cart + 60 chairs to the
+  // courtyard"): with no room there's no room owner, so without this it would
+  // produce zero steps and slip through the gate entirely. Route it to the
+  // central scheduling office so it still lands in a queue and gets a decision.
+  if (byApprover.size === 0 && (e.resources?.length ?? 0) > 0) {
+    add(DEFAULT_APPROVER, 'Scheduling office');
   }
   return [...byApprover.values()];
 }
