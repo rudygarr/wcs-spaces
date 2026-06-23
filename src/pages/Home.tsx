@@ -12,6 +12,7 @@ import { pendingForApprover } from '../lib/approvals';
 import { pmDueCount } from '../lib/assets';
 import { checkinState } from '../lib/checkin';
 import { rentalFollowups, uncollectedTotal, money } from '../lib/rentals';
+import { pendingForPerson } from '../lib/crew';
 
 const tiles = [
   { cls: 't-book', icon: 'ti-calendar-plus', label: 'Book', to: '/book' },
@@ -154,6 +155,8 @@ export default function Home() {
     db.workItems.filter((w) => !w.withdrawn && w.requestedBy === user.name && w.status !== 'Done').length +
     db.events.filter((e) => e.owner === user.name && e.kind !== 'notice' && e.status === 'Pending' && !e.withdrawn).length;
   const myApprovals = pendingForApprover(db, user.name).length;
+  const myCrewRequests = pendingForPerson(db, user.id).length;
+  const hasTeams = (db.crewTeams ?? []).length > 0;
   const canSeePM = user.site_admin || user.department === 'Maintenance';
   const pmDue = pmDueCount(db);
   // Check-in: my bookings happening now that still need confirmation.
@@ -388,6 +391,40 @@ export default function Home() {
             <span className="sub">
               {rentFollowups} need follow-up{rentUncollected > 0 ? ` · ${money(rentUncollected)} uncollected` : ''}
             </span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {myCrewRequests > 0 && (
+        <button
+          className="row"
+          onClick={() => nav('/my-schedule')}
+          style={{ width: '100%', background: 'var(--green-tint)', border: '0.5px solid var(--green)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0, background: 'var(--green)' }}>
+            <i className="ti ti-users-group" />
+          </span>
+          <span className="body">
+            <span className="title" style={{ color: 'var(--green)' }}>Serving requests</span>
+            <span className="sub">{myCrewRequests} waiting on your Accept / Decline</span>
+          </span>
+          <i className="ti ti-chevron-right chev" />
+        </button>
+      )}
+
+      {hasTeams && (
+        <button
+          className="row"
+          onClick={() => nav('/teams')}
+          style={{ width: '100%', background: 'var(--surface)', border: '0.5px solid var(--border-2)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: 16 }}
+        >
+          <span className="tile-icon t-book" style={{ width: 38, height: 38, borderRadius: 11, fontSize: 18, flexShrink: 0 }}>
+            <i className="ti ti-users-group" />
+          </span>
+          <span className="body">
+            <span className="title">Teams</span>
+            <span className="sub">Worship &amp; production crews — coverage and rosters</span>
           </span>
           <i className="ti ti-chevron-right chev" />
         </button>

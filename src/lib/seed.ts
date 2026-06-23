@@ -6,12 +6,16 @@ import { roomFolders, resourceFolders } from '../data/inventory';
 import { seedDrivers, seedWorkItems, seedTemplates, deptStaff } from '../data/fulfillment';
 import { seedAssets } from '../data/assets';
 import { isVehicle, busPhoto } from './busPhoto';
-import type { Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView } from './types';
+import { DEMO_TODAY } from './data';
+import type {
+  Database, EventRec, PersonRec, WcsEvent, Person, Notif, ConflictNote, Rental, AuditEntry, RequestComment, CalendarView,
+  CrewTeam, CrewPosition, CrewMember, PositionTemplate, CrewAssignment, Blockout,
+} from './types';
 
 // Bump this whenever the seed data changes (new events, people, rooms…).
 // On load, any saved DB with an older version is thrown out and rebuilt from
 // the new seed, so returning visitors don't get stuck on stale demo data.
-export const SEED_VERSION = 26;
+export const SEED_VERSION = 27;
 
 // Max occupancy per room. Rooms not listed are uncapped / not capacity-tracked.
 const ROOM_CAPACITY: Record<string, number> = {
@@ -506,6 +510,159 @@ function seedCalendarViews(): CalendarView[] {
   ];
 }
 
+// ---- Teams / crew layer seed (services-module-spec §5 + §9) ----
+// Two teams: a partially-staffed Chapel (every assignment state visible at once)
+// and an UN-staffed Band Concert left open on purpose, so the demo can run the
+// §9 walkthrough live (stamp a template, self-assign, request students).
+interface CrewSeed {
+  people: PersonRec[];
+  events: EventRec[];
+  teams: CrewTeam[];
+  positions: CrewPosition[];
+  members: CrewMember[];
+  templates: PositionTemplate[];
+  assignments: CrewAssignment[];
+  blockouts: Blockout[];
+}
+
+function seedCrew(basePeople: PersonRec[]): CrewSeed {
+  const NOW = DEMO_TODAY.toISOString();
+  const rudyId = basePeople.find((p) => p.name === 'Rudy Garrido')?.id ?? 'p-0';
+  // Synthetic students + a staff worship director. Public repo → @demo emails.
+  const mk = (i: number, name: string): PersonRec => ({
+    id: `cp-${i}`,
+    name,
+    email: `${name.toLowerCase().replace(/[^a-z]+/g, '.')}@demo.wcsmiami.org`,
+    event: '', rooms: '', resources: '', people: '',
+    resolves_conflicts: false, site_admin: false,
+  });
+  const P = {
+    grace: mk(0, 'Grace Okafor'),
+    maya: mk(1, 'Maya Delgado'),
+    eli: mk(2, 'Eli Robinson'),
+    sofia: mk(3, 'Sofia Marin'),
+    caleb: mk(4, 'Caleb Tan'),
+    hannah: mk(5, 'Hannah Brooks'),
+    noah: mk(6, 'Noah Park'),
+    diego: mk(7, 'Diego Ramos'),
+    ava: mk(8, 'Ava Chen'),
+    tyler: mk(9, 'Tyler Nguyen'),
+    jordan: mk(10, 'Jordan Blake'),
+  };
+  const people = Object.values(P);
+
+  const teams: CrewTeam[] = [
+    { id: 'tw', name: 'Chapel Worship', icon: 'ti-music', blurb: 'Student worship band for weekly chapel.', leaderPersonId: P.grace.id },
+    { id: 'tp', name: 'Production Services', icon: 'ti-broadcast', blurb: 'Media Services crew — sound, lights, camera, livestream for any event.', leaderPersonId: rudyId },
+  ];
+
+  // Positions (slots default 1; Vocals carries 3).
+  let psort = 0;
+  const pos = (teamId: string, name: string, slots?: number): CrewPosition => ({
+    id: `pos-${teamId}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}`,
+    teamId, name, sort: psort++, ...(slots ? { slots } : {}),
+  });
+  const W = {
+    leader: pos('tw', 'Worship Leader'),
+    keys: pos('tw', 'Keys'),
+    acoustic: pos('tw', 'Acoustic Guitar'),
+    bass: pos('tw', 'Bass'),
+    drums: pos('tw', 'Drums'),
+    vocals: pos('tw', 'Vocals', 3),
+  };
+  const PR = {
+    foh: pos('tp', 'FOH Sound'),
+    mons: pos('tp', 'Monitors'),
+    lx: pos('tp', 'Lighting'),
+    cam1: pos('tp', 'Camera 1'),
+    cam2: pos('tp', 'Camera 2'),
+    stream: pos('tp', 'Livestream'),
+    slides: pos('tp', 'ProPresenter / Slides'),
+    sm: pos('tp', 'Stage Manager'),
+    tech: pos('tp', 'AV Tech'),
+    caster: pos('tp', 'Commentator / Scorebug'),
+  };
+  const positions: CrewPosition[] = [...Object.values(W), ...Object.values(PR)];
+
+  // Member qualifications. Maya serves on BOTH teams (cross-team student).
+  const mem = (teamId: string, person: PersonRec, positionIds: string[]): CrewMember => ({
+    id: `cm-${teamId}-${person.id}`, teamId, personId: person.id, positionIds,
+  });
+  const members: CrewMember[] = [
+    mem('tw', P.grace, [W.leader.id, W.vocals.id]),
+    mem('tw', P.maya, [W.keys.id, W.vocals.id]),
+    mem('tw', P.eli, [W.acoustic.id, W.leader.id]),
+    mem('tw', P.sofia, [W.vocals.id]),
+    mem('tw', P.caleb, [W.bass.id]),
+    mem('tw', P.hannah, [W.drums.id]),
+    mem('tw', P.noah, [W.vocals.id, W.keys.id]),
+    // Production
+    mem('tp', { id: rudyId } as PersonRec, [PR.foh.id, PR.slides.id, PR.sm.id, PR.tech.id]),
+    mem('tp', P.diego, [PR.cam1.id, PR.cam2.id, PR.stream.id]),
+    mem('tp', P.ava, [PR.slides.id, PR.lx.id]),
+    mem('tp', P.tyler, [PR.foh.id, PR.mons.id, PR.tech.id]),
+    mem('tp', P.jordan, [PR.cam1.id, PR.stream.id, PR.caster.id]),
+    mem('tp', P.maya, [PR.cam2.id]),
+  ];
+
+  const templates: PositionTemplate[] = [
+    { id: 'tpl-w-full', teamId: 'tw', name: 'Full Band', icon: 'ti-users-group', positionIds: [W.leader.id, W.keys.id, W.acoustic.id, W.bass.id, W.drums.id, W.vocals.id] },
+    { id: 'tpl-w-acoustic', teamId: 'tw', name: 'Acoustic set', icon: 'ti-guitar-pick', positionIds: [W.leader.id, W.acoustic.id, W.vocals.id] },
+    { id: 'tpl-p-full', teamId: 'tp', name: 'Full Production', icon: 'ti-stack-2', positionIds: [PR.foh.id, PR.mons.id, PR.lx.id, PR.cam1.id, PR.cam2.id, PR.stream.id, PR.slides.id, PR.sm.id] },
+    { id: 'tpl-p-basic', teamId: 'tp', name: 'Basic AV (single tech)', icon: 'ti-device-audio-tape', positionIds: [PR.tech.id] },
+    { id: 'tpl-p-stream', teamId: 'tp', name: 'Livestream package', icon: 'ti-video', positionIds: [PR.cam1.id, PR.stream.id, PR.foh.id] },
+    { id: 'tpl-p-ath', teamId: 'tp', name: 'Athletics broadcast', icon: 'ti-ball-basketball', positionIds: [PR.cam1.id, PR.stream.id, PR.caster.id, PR.foh.id] },
+  ];
+
+  // Two events the crew rides (each a real Spaces booking that holds the room).
+  const evBase = {
+    all_day: false, setup_starts: null, teardown_ends: null, recurrence: null,
+    percent_approved: 100, status: 'Approved' as const, source: 'internal' as const,
+    kind: 'booking' as const, resources: [] as string[],
+  };
+  const events: EventRec[] = [
+    {
+      ...evBase, id: 'e-chapel-crew', name: 'Wednesday Chapel',
+      starts_at: '2026-08-26T14:00:00Z', ends_at: '2026-08-26T14:40:00Z', // 10:00–10:40 EDT
+      owner: 'Grace Okafor', location: 'Lighthouse PAC', rooms: ['Lighthouse PAC'],
+      category: 'Chapel', details: 'Weekly all-school chapel. Worship band + message.',
+    },
+    {
+      ...evBase, id: 'e-concert-crew', name: 'Fall Pops Concert',
+      starts_at: '2026-09-18T23:00:00Z', ends_at: '2026-09-19T00:30:00Z', // Sep 18, 7:00–8:30 EDT
+      owner: 'Lori Sakkab', location: 'Lighthouse PAC', rooms: ['Lighthouse PAC'],
+      category: 'Concert', details: 'Bands & choir fall showcase. Needs full production crew.',
+    },
+  ];
+
+  // Chapel is partially staffed so every state shows at once (§5):
+  // most accepted, one pending, one declined (slot re-open), one open, plus a
+  // drummer who is blocked that day but the coordinator scheduled anyway.
+  const asg = (n: number, positionId: string, person: PersonRec | null, status: CrewAssignment['status']): CrewAssignment => ({
+    id: `casg-${n}`, eventId: 'e-chapel-crew', teamId: 'tw', positionId,
+    ...(person ? { personId: person.id } : {}),
+    status,
+    ...(status !== 'open' ? { requestedAt: NOW } : {}),
+    ...(status === 'accepted' || status === 'declined' || status === 'self' ? { respondedAt: NOW } : {}),
+  });
+  const assignments: CrewAssignment[] = [
+    asg(1, W.leader.id, P.grace, 'accepted'),
+    asg(2, W.keys.id, P.maya, 'accepted'),
+    asg(3, W.acoustic.id, P.eli, 'accepted'),
+    asg(4, W.bass.id, P.caleb, 'requested'),
+    asg(5, W.drums.id, P.hannah, 'accepted'), // blocked that day, scheduled anyway
+    asg(6, W.vocals.id, P.sofia, 'accepted'),
+    asg(7, W.vocals.id, P.noah, 'declined'),
+    asg(8, W.vocals.id, null, 'open'),
+  ];
+
+  const blockouts: Blockout[] = [
+    { id: 'blk-1', personId: P.hannah.id, start: '2026-08-25', end: '2026-08-27', allDay: true, reason: 'Family travel' },
+  ];
+
+  return { people, events, teams, positions, members, templates, assignments, blockouts };
+}
+
 // Builds the initial in-memory database from the harvested seed data.
 // This is the demo's starting point; the store persists edits on top of it.
 export function buildSeed(): Database {
@@ -526,11 +683,13 @@ export function buildSeed(): Database {
       ...(isVehicle(name) ? { photo: busPhoto(name) } : {}),
     })),
   );
-  const people: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({
+  const basePeople: PersonRec[] = (rawPeople as Person[]).map((p, i) => ({
     ...p,
     id: `p-${i}`,
     ...(deptStaff[p.name] ?? {}),
   }));
+  const crew = seedCrew(basePeople);
+  const people = [...basePeople, ...crew.people];
   // Internal bookings harvested from Planning Center, plus the public master
   // calendar pulled from the school's iCal feed.
   const internal: EventRec[] = (rawEvents as WcsEvent[])
@@ -544,7 +703,7 @@ export function buildSeed(): Database {
     rooms,
     resources,
     people,
-    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events],
+    events: [...internal, ...publicEvents, ...athletic, ...notices, ...seedInventoryDemand(), ...seedCheckinDemo(), ...seedSeries(), ...seedCoverageDemo(), ...rentalsSeed.events, ...crew.events],
     workItems: seedWorkItems,
     drivers: seedDrivers,
     templates: seedTemplates,
@@ -555,6 +714,12 @@ export function buildSeed(): Database {
     audit: seedAudit(),
     comments: seedComments(),
     calendarViews: seedCalendarViews(),
+    crewTeams: crew.teams,
+    crewPositions: crew.positions,
+    crewMembers: crew.members,
+    positionTemplates: crew.templates,
+    crewAssignments: crew.assignments,
+    blockouts: crew.blockouts,
     seedVersion: SEED_VERSION,
   };
 }

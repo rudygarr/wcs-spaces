@@ -26,6 +26,9 @@ import Rentals from './pages/Rentals';
 import RentalDetail from './pages/RentalDetail';
 import Audit from './pages/Audit';
 import Search from './pages/Search';
+import Teams from './pages/Teams';
+import CrewTeamDetail from './pages/CrewTeamDetail';
+import MySchedule from './pages/MySchedule';
 import './App.css';
 
 function Gate() {
@@ -53,6 +56,9 @@ function Gate() {
           <Route path="/rental/:id" element={<RentalDetail />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/crew/:teamId" element={<CrewTeamDetail />} />
+          <Route path="/my-schedule" element={<MySchedule />} />
           <Route path="/work/:id" element={<WorkDetail />} />
           <Route path="/book" element={<Book />} />
           <Route path="/room/:id" element={<RoomDetail />} />

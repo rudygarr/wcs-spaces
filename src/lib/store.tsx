@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView } from './types';
+import type { Database, Room, Resource, PersonRec, EventRec, WorkItem, Driver, Template, Notif, ConflictNote, Asset, Rental, AuditEntry, RequestComment, CalendarView, CrewAssignment, Blockout } from './types';
 import { buildSeed, SEED_VERSION } from './seed';
 import { loadDB, saveDB, clearDB } from './persistence';
 import { DEMO_TODAY } from './data';
@@ -93,6 +93,14 @@ interface StoreCtx {
   removeCalendarView: (id: string) => void;
   updateSeries: (seriesId: string, scope: SeriesScope, anchorId: string, patch: Partial<EventRec>) => number;
   setSeriesCancelled: (seriesId: string, scope: SeriesScope, anchorId: string, cancelled: boolean) => number;
+  // Teams / crew layer
+  applyPositionTemplate: (eventId: string, templateId: string) => void;
+  addCrewSlot: (eventId: string, teamId: string, positionId: string) => void;
+  removeCrewAssignment: (id: string) => void;
+  assignCrew: (assignmentId: string, personId: string, mode: 'request' | 'self') => void;
+  respondCrew: (assignmentId: string, accept: boolean) => void;
+  addBlockout: (b: Omit<Blockout, 'id'>) => void;
+  removeBlockout: (id: string) => void;
   reset: () => void;
 }
 
@@ -549,6 +557,122 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       });
       return n;
+    },
+    // ---- Teams / crew layer ----
+    // Stamp a saved bundle of positions onto an event as OPEN slots, ready to
+    // staff (one row per slot — "Vocals (3)" lands three). Never removes existing
+    // crew; applying twice just adds another set.
+    applyPositionTemplate(eventId, templateId) {
+      commit((d) => {
+        const tpl = (d.positionTemplates ?? []).find((t) => t.id === templateId);
+        if (!tpl) return d;
+        const rows: CrewAssignment[] = [];
+        for (const pid of tpl.positionIds) {
+          const pos = (d.crewPositions ?? []).find((p) => p.id === pid);
+          if (!pos) continue;
+          const slots = pos.slots ?? 1;
+          for (let i = 0; i < slots; i++) {
+            rows.push({ id: uid('casg'), eventId, teamId: tpl.teamId, positionId: pid, status: 'open' });
+          }
+        }
+        const ev = d.events.find((e) => e.id === eventId);
+        const team = (d.crewTeams ?? []).find((t) => t.id === tpl.teamId);
+        const nd = { ...d, crewAssignments: [...(d.crewAssignments ?? []), ...rows] };
+        return withAudit(nd, {
+          action: `Added ${team?.name ?? 'crew'} — ${tpl.name}`,
+          entityType: 'booking', entityId: eventId, entityLabel: ev?.name ?? 'Event',
+          detail: `${rows.length} position${rows.length === 1 ? '' : 's'}`, link: `#/event/${eventId}`,
+        });
+      });
+    },
+    addCrewSlot(eventId, teamId, positionId) {
+      commit((d) => ({
+        ...d,
+        crewAssignments: [...(d.crewAssignments ?? []), { id: uid('casg'), eventId, teamId, positionId, status: 'open' }],
+      }));
+    },
+    removeCrewAssignment(id) {
+      commit((d) => ({ ...d, crewAssignments: (d.crewAssignments ?? []).filter((a) => a.id !== id) }));
+    },
+    // Place a person on a slot. 'self' is already confirmed (no round-trip); a
+    // 'request' pings the person and waits on their accept/decline.
+    assignCrew(assignmentId, personId, mode) {
+      const now = DEMO_TODAY.toISOString();
+      commit((d) => {
+        const a = (d.crewAssignments ?? []).find((x) => x.id === assignmentId);
+        if (!a) return d;
+        const status: CrewAssignment['status'] = mode === 'self' ? 'self' : 'requested';
+        const nd = {
+          ...d,
+          crewAssignments: (d.crewAssignments ?? []).map((x) =>
+            x.id === assignmentId
+              ? { ...x, personId, status, requestedAt: now, respondedAt: mode === 'self' ? now : undefined }
+              : x,
+          ),
+        };
+        const ev = d.events.find((e) => e.id === a.eventId);
+        const pos = (d.crewPositions ?? []).find((p) => p.id === a.positionId);
+        const person = d.people.find((p) => p.id === personId);
+        const withLog = withAudit(nd, {
+          action: mode === 'self' ? `Self-assigned — ${pos?.name ?? 'crew'}` : `Requested ${person?.name ?? 'crew'} — ${pos?.name ?? ''}`,
+          entityType: 'booking', entityId: a.eventId, entityLabel: ev?.name ?? 'Event', link: `#/event/${a.eventId}`,
+        });
+        return withLog;
+      });
+      // Ping the requested person (outside commit so notify composes cleanly).
+      if (mode === 'request') {
+        const a = (db.crewAssignments ?? []).find((x) => x.id === assignmentId);
+        const ev = a && db.events.find((e) => e.id === a.eventId);
+        const pos = a && (db.crewPositions ?? []).find((p) => p.id === a.positionId);
+        const person = db.people.find((p) => p.id === personId);
+        if (person && ev) {
+          api.notify({
+            to: person.name, kind: 'crew',
+            title: `Serving request — ${pos?.name ?? 'crew'}`,
+            body: `${ev.name} · respond in My schedule`,
+            link: `#/my-schedule`,
+          });
+        }
+      }
+    },
+    // Musician's accept / decline. Decline re-opens the slot for coverage but
+    // keeps the row (status 'declined') so the board shows what happened.
+    respondCrew(assignmentId, accept) {
+      const now = DEMO_TODAY.toISOString();
+      commit((d) => {
+        const a = (d.crewAssignments ?? []).find((x) => x.id === assignmentId);
+        if (!a) return d;
+        const nd = {
+          ...d,
+          crewAssignments: (d.crewAssignments ?? []).map((x) =>
+            x.id === assignmentId ? { ...x, status: accept ? 'accepted' : 'declined', respondedAt: now } as CrewAssignment : x,
+          ),
+        };
+        const ev = d.events.find((e) => e.id === a.eventId);
+        const pos = (d.crewPositions ?? []).find((p) => p.id === a.positionId);
+        const team = (d.crewTeams ?? []).find((t) => t.id === a.teamId);
+        const leader = team?.leaderPersonId ? d.people.find((p) => p.id === team.leaderPersonId) : null;
+        const person = a.personId ? d.people.find((p) => p.id === a.personId) : null;
+        const withLog = withAudit(nd, {
+          action: `${accept ? 'Accepted' : 'Declined'} — ${pos?.name ?? 'crew'}`,
+          entityType: 'booking', entityId: a.eventId, entityLabel: ev?.name ?? 'Event', link: `#/event/${a.eventId}`,
+        });
+        // Let the coordinator know, especially on a decline (slot needs refilling).
+        if (leader && person && ev) {
+          return { ...withLog, notifications: [...withLog.notifications, {
+            id: uid('n'), to: leader.name, kind: 'crew' as const,
+            title: `${person.name} ${accept ? 'accepted' : 'declined'} — ${pos?.name ?? 'crew'}`,
+            body: ev.name, link: `#/event/${a.eventId}`, createdAt: now,
+          }] };
+        }
+        return withLog;
+      });
+    },
+    addBlockout(b) {
+      commit((d) => ({ ...d, blockouts: [...(d.blockouts ?? []), { ...b, id: uid('blk') }] }));
+    },
+    removeBlockout(id) {
+      commit((d) => ({ ...d, blockouts: (d.blockouts ?? []).filter((b) => b.id !== id) }));
     },
     reset() {
       void clearDB();

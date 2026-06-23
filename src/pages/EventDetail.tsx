@@ -13,6 +13,7 @@ import { SetupDiagram, setupStyleName } from '../components/SetupDiagram';
 import { rollTimes, fmtMin, fmtDur, totalRuntime, printRunSheet, CUE_META } from '../lib/runsheet';
 import AuditHistory from '../components/AuditHistory';
 import RequestThread from '../components/RequestThread';
+import CrewBoard from '../components/CrewBoard';
 import type { ApprovalRec, EventRec } from '../lib/types';
 
 export default function EventDetail() {
@@ -511,6 +512,10 @@ export default function EventDetail() {
       ) : (
         <div className="page-sub" style={{ fontSize: 13 }}>No run sheet yet.</div>
       )}
+
+      <div style={{ marginTop: 14 }}>
+        <CrewBoard ev={ev} />
+      </div>
 
       {(ev.assignments?.length ?? 0) > 0 && (
         <>

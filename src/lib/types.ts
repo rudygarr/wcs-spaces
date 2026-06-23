@@ -385,6 +385,79 @@ export interface Asset {
   active?: boolean;
 }
 
+// ---- Teams: the optional people/crew layer (services-module-spec §1–§9) ----
+// The Run Sheet (§12) is the universal primitive and ships already; Teams plug
+// IN as "who is committed to each beat." A Team is generic — the demo seeds
+// Worship + Production, but any event-volunteer team is data, not code.
+
+// A group of roles people serve in (Chapel Worship, Production Services, …).
+export interface CrewTeam {
+  id: string;
+  name: string;
+  icon?: string; // ti-* glyph
+  blurb?: string;
+  leaderPersonId?: string; // coordinator / worship director / A-V lead
+}
+
+// A role within a team. Coverage is counted per position (slots default 1).
+export interface CrewPosition {
+  id: string;
+  teamId: string;
+  name: string; // "Worship Leader", "Keys", "FOH Sound", "Camera 1"
+  slots?: number; // default 1; "Vocals" might be 3 — mirrors stock qty
+  sort: number;
+}
+
+// Which positions a person is qualified for. A person can sit on multiple teams.
+export interface CrewMember {
+  id: string;
+  teamId: string;
+  personId: string;
+  positionIds: string[]; // "Maya can play Keys or sing Vocals"
+}
+
+// A named, reusable bundle of positions stamped onto an event in one press
+// ("Full Production", "Basic AV", "Livestream package", "Athletics broadcast").
+export interface PositionTemplate {
+  id: string;
+  teamId: string;
+  name: string;
+  icon?: string;
+  positionIds: string[];
+}
+
+// 'open'      = slot exists, nobody placed yet
+// 'requested' = a person was asked, awaiting their reply
+// 'accepted'  = they said yes
+// 'declined'  = they said no (slot re-opens for coverage, kept for the trail)
+// 'self'      = the person placed themselves — already confirmed, no round-trip
+export type CrewStatus = 'open' | 'requested' | 'accepted' | 'declined' | 'self';
+
+// One slot on one event for one position. The EVENT is the plan (§12 reframe) —
+// crew rides the Spaces event that already holds the room, so there is no
+// parallel "Plan" object. Applying a template creates a row per slot as 'open'.
+export interface CrewAssignment {
+  id: string;
+  eventId: string;
+  teamId: string;
+  positionId: string;
+  personId?: string; // unset while 'open'
+  status: CrewStatus;
+  requestedAt?: string; // stamped DEMO_TODAY (demo-frame rule)
+  respondedAt?: string;
+}
+
+// Person-level unavailability. Soft — scheduling onto a blockout warns, never
+// blocks (conflict philosophy). Demo uses all-day, date-range blockouts.
+export interface Blockout {
+  id: string;
+  personId: string;
+  start: string; // dayKey "YYYY-MM-DD"
+  end: string; // dayKey (inclusive)
+  allDay: boolean;
+  reason?: string;
+}
+
 export interface Database {
   rooms: Room[];
   resources: Resource[];
@@ -400,6 +473,13 @@ export interface Database {
   audit?: AuditEntry[];
   comments?: RequestComment[];
   calendarViews?: CalendarView[];
+  // Teams / crew layer (optional; absent on a fresh older DB).
+  crewTeams?: CrewTeam[];
+  crewPositions?: CrewPosition[];
+  crewMembers?: CrewMember[];
+  positionTemplates?: PositionTemplate[];
+  crewAssignments?: CrewAssignment[];
+  blockouts?: Blockout[];
   // Bumped whenever the seed data changes. A saved DB with an older version is
   // discarded on load so returning visitors pick up new demo data automatically.
   seedVersion?: number;
