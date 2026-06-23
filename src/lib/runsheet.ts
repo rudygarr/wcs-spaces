@@ -124,6 +124,150 @@ export function printRunSheet(eventName: string, dateLabel: string, sheet: RunSh
   setTimeout(() => w.print(), 250);
 }
 
+// ---------------------------------------------------------------------------
+// Templates — a "shortcut, never a gate." Stamping one fills the spine with the
+// beats a given kind of event almost always has, pre-tagged with the obvious
+// tech cues. The user edits from there; nothing here is required.
+// ---------------------------------------------------------------------------
+
+interface SegSpec {
+  dur: number;
+  title: string;
+  who?: string;
+  notes?: string;
+  crew?: { role: string; person?: string; call?: string }[];
+  cues?: { dept: CueDept; action: string }[];
+}
+
+function mkSegs(specs: SegSpec[]): RunSegment[] {
+  return specs.map((s) => ({
+    id: newSegId(),
+    durationMin: s.dur,
+    title: s.title,
+    ...(s.who ? { who: s.who } : {}),
+    ...(s.notes ? { notes: s.notes } : {}),
+    ...(s.crew ? { crew: s.crew.map((c) => ({ role: c.role, person: c.person ?? '', ...(c.call ? { call: c.call } : {}) })) } : {}),
+    ...(s.cues ? { cues: s.cues.map((q) => ({ dept: q.dept, action: q.action })) } : {}),
+  }));
+}
+
+export interface RunTemplate {
+  id: string;
+  label: string;
+  icon: string;
+  blurb: string;
+  build: () => RunSegment[];
+}
+
+export const RUN_TEMPLATES: RunTemplate[] = [
+  {
+    id: 'basketball',
+    label: 'Basketball game',
+    icon: 'ti-ball-basketball',
+    blurb: 'Warm-ups → anthem → halves → halftime → post',
+    build: () =>
+      mkSegs([
+        { dur: 30, title: 'Doors open · warm-ups', who: 'Gym staff', cues: [{ dept: 'AUD', action: 'Walk-in playlist up' }, { dept: 'SCB', action: 'Pre-game clock on board' }] },
+        { dur: 10, title: 'Starting lineups', cues: [{ dept: 'AUD', action: 'Announcer mic live, intro music' }, { dept: 'LX', action: 'House to game level' }] },
+        { dur: 5, title: 'National anthem', cues: [{ dept: 'AUD', action: 'Anthem source / vocalist mic' }] },
+        { dur: 40, title: '1st half', cues: [{ dept: 'SCB', action: 'Game clock + score live' }] },
+        { dur: 15, title: 'Halftime', who: 'Halftime act / contests', cues: [{ dept: 'AUD', action: 'Halftime music + mic for promo' }] },
+        { dur: 40, title: '2nd half' },
+        { dur: 10, title: 'Post-game', notes: 'Senior recognition / handshake line if scheduled', cues: [{ dept: 'AUD', action: 'Outro music' }] },
+      ]),
+  },
+  {
+    id: 'theater',
+    label: 'Theater show',
+    icon: 'ti-masks-theater',
+    blurb: 'House → acts → intermission → curtain call',
+    build: () =>
+      mkSegs([
+        { dur: 30, title: 'House opens', who: 'Front of house', cues: [{ dept: 'AUD', action: 'Pre-show music' }, { dept: 'LX', action: 'House up full' }] },
+        { dur: 5, title: 'Pre-show announcements', cues: [{ dept: 'AUD', action: 'Announce mic' }, { dept: 'LX', action: 'House to half, then out' }] },
+        { dur: 45, title: 'Act I', cues: [{ dept: 'LX', action: 'Act I light cues' }, { dept: 'AUD', action: 'Mic checks / SFX' }] },
+        { dur: 15, title: 'Intermission', cues: [{ dept: 'AUD', action: 'Intermission music' }, { dept: 'LX', action: 'House up' }] },
+        { dur: 45, title: 'Act II', cues: [{ dept: 'LX', action: 'Act II light cues' }] },
+        { dur: 5, title: 'Curtain call', cues: [{ dept: 'LX', action: 'Bows special' }, { dept: 'AUD', action: 'Bows music' }] },
+        { dur: 15, title: 'House clear', who: 'Front of house' },
+      ]),
+  },
+  {
+    id: 'chapel',
+    label: 'Chapel / service',
+    icon: 'ti-cross',
+    blurb: 'Pre-service → worship → message → benediction',
+    build: () =>
+      mkSegs([
+        { dur: 5, title: 'Pre-service music', crew: [{ role: 'A1', call: '07:45' }], cues: [{ dept: 'AUD', action: 'Walk-in bed' }] },
+        { dur: 5, title: 'Welcome & call to worship' },
+        { dur: 15, title: 'Worship set', crew: [{ role: 'ProPresenter' }], cues: [{ dept: 'VID', action: 'Lyrics to screens' }, { dept: 'AUD', action: 'Band mix up' }, { dept: 'LX', action: 'Worship look' }] },
+        { dur: 5, title: 'Scripture & prayer', cues: [{ dept: 'VID', action: 'Scripture slide' }] },
+        { dur: 20, title: 'Message' },
+        { dur: 5, title: 'Closing & benediction', cues: [{ dept: 'AUD', action: 'Outro bed' }] },
+      ]),
+  },
+  {
+    id: 'graduation',
+    label: 'Graduation',
+    icon: 'ti-school',
+    blurb: 'Processional → speeches → diplomas → recessional',
+    build: () =>
+      mkSegs([
+        { dur: 15, title: 'Doors / guest seating', who: 'Ushers', cues: [{ dept: 'AUD', action: 'Pre-ceremony music' }] },
+        { dur: 10, title: 'Processional', cues: [{ dept: 'AUD', action: 'Pomp & Circumstance' }, { dept: 'VID', action: 'IMAG / livestream up' }] },
+        { dur: 5, title: 'Welcome & invocation', cues: [{ dept: 'AUD', action: 'Podium mic' }] },
+        { dur: 20, title: 'Speeches & remarks', notes: 'Valedictorian, head of school, guest' },
+        { dur: 30, title: 'Conferring of diplomas', who: 'Name reader', cues: [{ dept: 'AUD', action: 'Name reader mic — pace per grad' }, { dept: 'VID', action: 'Grad name lower-third / cam' }] },
+        { dur: 5, title: 'Turning of tassels & closing' },
+        { dur: 10, title: 'Recessional', cues: [{ dept: 'AUD', action: 'Recessional music' }] },
+      ]),
+  },
+  {
+    id: 'peprally',
+    label: 'Pep rally',
+    icon: 'ti-confetti',
+    blurb: 'Entry → intros → performances → fight song',
+    build: () =>
+      mkSegs([
+        { dur: 15, title: 'Student entry', who: 'Class seating by grade', cues: [{ dept: 'AUD', action: 'Hype playlist' }] },
+        { dur: 5, title: 'Welcome & spirit intro', cues: [{ dept: 'AUD', action: 'Emcee mic' }] },
+        { dur: 10, title: 'Team introductions', cues: [{ dept: 'AUD', action: 'Walk-out music per team' }] },
+        { dur: 15, title: 'Cheer / dance performances', cues: [{ dept: 'AUD', action: 'Performance tracks' }, { dept: 'LX', action: 'Color wash' }] },
+        { dur: 15, title: 'Games & contests', notes: 'Class competitions' },
+        { dur: 5, title: 'Fight song & dismissal', cues: [{ dept: 'AUD', action: 'Fight song' }] },
+      ]),
+  },
+  {
+    id: 'concert',
+    label: 'Concert',
+    icon: 'ti-music',
+    blurb: 'Doors → sets → intermission → encore',
+    build: () =>
+      mkSegs([
+        { dur: 30, title: 'Doors open', who: 'Front of house', cues: [{ dept: 'AUD', action: 'House music' }, { dept: 'LX', action: 'House up' }] },
+        { dur: 5, title: 'Welcome', cues: [{ dept: 'AUD', action: 'Announce mic' }] },
+        { dur: 30, title: 'Set 1', cues: [{ dept: 'AUD', action: 'Band mix' }, { dept: 'LX', action: 'Set 1 looks' }] },
+        { dur: 15, title: 'Intermission', cues: [{ dept: 'AUD', action: 'Interval music' }, { dept: 'LX', action: 'House up' }] },
+        { dur: 30, title: 'Set 2', cues: [{ dept: 'LX', action: 'Set 2 looks' }] },
+        { dur: 10, title: 'Encore', cues: [{ dept: 'LX', action: 'Encore special' }] },
+        { dur: 15, title: 'House clear', who: 'Front of house' },
+      ]),
+  },
+  {
+    id: 'generic',
+    label: 'Generic',
+    icon: 'ti-list-details',
+    blurb: 'A simple setup → main → wrap spine',
+    build: () =>
+      mkSegs([
+        { dur: 15, title: 'Setup & doors' },
+        { dur: 30, title: 'Main segment' },
+        { dur: 10, title: 'Wrap-up & teardown' },
+      ]),
+  },
+];
+
 // Best-guess wall-clock HH:MM for when the show starts, from the event itself.
 // Uses the event's local start time; falls back to a sensible 6:00 PM.
 export function deriveStart(ev: EventRec): string {

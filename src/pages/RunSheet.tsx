@@ -12,7 +12,9 @@ import {
   deriveStart,
   CUE_META,
   CUE_DEPTS,
+  RUN_TEMPLATES,
 } from '../lib/runsheet';
+import type { RunTemplate } from '../lib/runsheet';
 
 // The run-of-show editor. Run-of-show is the spine: a rolling clock of timed
 // segments. Each segment expands into its own call sheet (crew) and cue sheet
@@ -27,6 +29,7 @@ export default function RunSheet() {
     ev?.runSheet ? structuredClone(ev.runSheet) : blankSheet(ev ? deriveStart(ev) : '18:00'),
   );
   const [open, setOpen] = useState<string | null>(draft.segments[0]?.id ?? null);
+  const [tplOpen, setTplOpen] = useState(false);
 
   if (!ev) {
     return (
@@ -41,6 +44,20 @@ export default function RunSheet() {
 
   const rolled = rollTimes(draft);
   const total = totalRuntime(draft);
+
+  // A sheet is "empty" when nothing meaningful has been typed yet — that's when
+  // templates lead. Once there's real content they hide behind a quiet link.
+  const isEmpty = draft.segments.every(
+    (s) => !s.title.trim() && !(s.crew?.length ?? 0) && !(s.cues?.length ?? 0) && !s.notes?.trim(),
+  );
+  const applyTemplate = (t: RunTemplate) => {
+    if (!isEmpty && !confirm(`Replace the current run sheet with the "${t.label}" template?`)) return;
+    const segs = t.build();
+    setDraft((d) => ({ ...d, segments: segs }));
+    setOpen(segs[0]?.id ?? null);
+    setTplOpen(false);
+  };
+  const showTpl = isEmpty || tplOpen;
 
   // ---- immutable draft mutators ----
   const setStart = (start: string) => setDraft((d) => ({ ...d, start }));
@@ -118,6 +135,35 @@ export default function RunSheet() {
           {draft.segments.length} segs · {fmtDur(total)}
         </span>
       </div>
+
+      {showTpl ? (
+        <div className="ros-tpl">
+          <div className="ros-tpl-head">
+            <span>
+              <i className="ti ti-template" /> Start from a template
+            </span>
+            {!isEmpty && (
+              <button className="ros-tpl-close" onClick={() => setTplOpen(false)} title="Close">
+                <i className="ti ti-x" />
+              </button>
+            )}
+          </div>
+          <div className="ros-tpl-grid">
+            {RUN_TEMPLATES.map((t) => (
+              <button key={t.id} className="ros-tpl-card" onClick={() => applyTemplate(t)}>
+                <i className={'ti ' + t.icon} />
+                <span className="ros-tpl-label">{t.label}</span>
+                <span className="ros-tpl-blurb">{t.blurb}</span>
+              </button>
+            ))}
+          </div>
+          {isEmpty && <div className="ros-tpl-foot">…or just add segments below by hand.</div>}
+        </div>
+      ) : (
+        <button className="ros-tpl-link" onClick={() => setTplOpen(true)}>
+          <i className="ti ti-template" /> Start from a template
+        </button>
+      )}
 
       <div className="ros-list">
         {draft.segments.map((seg, i) => {
