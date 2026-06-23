@@ -3156,3 +3156,22 @@
   border: none; padding: 6px 12px; border-radius: 999px; cursor: pointer;
 }
 .vis-out { margin-left: auto; flex-shrink: 0; font-size: 12px; color: var(--text-3); }
+
+/* ---- Time stepper (typeable time + up/down arrows) ---- */
+.time-stepper { display: flex; align-items: stretch; gap: 6px; }
+.time-stepper input {
+  flex: 1; min-width: 0; height: 42px;
+  border-radius: var(--r-sm); border: 0.5px solid var(--border-2);
+  background: var(--surface-2); color: var(--text-1);
+  padding: 0 12px; font-size: 15px; font-family: inherit;
+}
+.time-stepper input::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+.time-stepper-btns { display: flex; flex-direction: column; width: 34px; flex-shrink: 0; gap: 4px; }
+.time-step-btn, .time-stepper-btns button {
+  flex: 1; display: grid; place-items: center;
+  border: 0.5px solid var(--border-2); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--text-2); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0;
+}
+.time-stepper-btns button:hover { background: var(--green-tint); color: var(--green); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+.time-stepper-btns button:active { transform: translateY(0.5px); }

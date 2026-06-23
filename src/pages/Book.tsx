@@ -7,39 +7,13 @@ import { blackoutFor } from '../lib/calendar';
 import { availableOn, resourceByName } from '../lib/stock';
 import { field, primaryBtn } from '../components/Modal';
 import { SetupDiagram, setupStyles } from '../components/SetupDiagram';
+import TimeStepper from '../components/TimeStepper';
 import type { Template } from '../lib/types';
-
-// 6:00 a.m. → 9:00 p.m. in 15-min steps for the time dropdowns.
-const TIME_OPTS: { v: string; label: string }[] = [];
-for (let h = 6; h <= 21; h++) {
-  for (const m of [0, 15, 30, 45]) {
-    const v = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    const hr = h % 12 === 0 ? 12 : h % 12;
-    TIME_OPTS.push({ v, label: `${hr}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}` });
-  }
-}
 
 // Step a YYYY-MM-DD key by n days, anchored at UTC noon so DST never shifts the date.
 function addDaysKey(key: string, n: number): string {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + n, 12)).toISOString().slice(0, 10);
-}
-
-function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const known = TIME_OPTS.some((t) => t.v === value);
-  return (
-    <div style={{ position: 'relative' }}>
-      <select style={{ ...field, appearance: 'none', paddingRight: 30 }} value={value} onChange={(e) => onChange(e.target.value)}>
-        {!known && value && <option value={value}>{value}</option>}
-        {TIME_OPTS.map((t) => (
-          <option key={t.v} value={t.v}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      <i className="ti ti-chevron-down" style={{ position: 'absolute', right: 11, top: 13, color: 'var(--text-3)', pointerEvents: 'none' }} />
-    </div>
-  );
 }
 
 const BUFFER_OPTS = [0, 15, 30, 45, 60, 90, 120];
@@ -304,16 +278,16 @@ export default function Book() {
       <input style={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Booster Club meeting" autoFocus />
 
       <label className="flabel">Date</label>
-      <input style={field} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <input style={{ ...field, appearance: 'auto' }} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
         <div style={{ flex: 1 }}>
-          <label className="flabel">Start</label>
-          <TimeSelect value={start} onChange={setStart} />
+          <label className="flabel">Start time</label>
+          <TimeStepper value={start} onChange={setStart} />
         </div>
         <div style={{ flex: 1 }}>
-          <label className="flabel">End</label>
-          <TimeSelect value={end} onChange={setEnd} />
+          <label className="flabel">End time</label>
+          <TimeStepper value={end} onChange={setEnd} />
         </div>
       </div>
 
